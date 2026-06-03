@@ -7,7 +7,7 @@ function App() {
   return (
     <main className="w-full h-full">
       <Flex gap="2" className="w-full h-screen box-border p-2" align="center" justify="start">
-        <Box width="320px" height="100%">
+        <Box width="400px" height="100%">
             <SessionBox />
         </Box>
         <Box width="100%" height="100%">
