@@ -1,30 +1,99 @@
-import { Box, Button, Card, Flex } from "@radix-ui/themes";
-import { DesktopIcon, LinkNone1Icon, Pencil2Icon, TrashIcon } from '@radix-ui/react-icons'
+import { Badge, Box, Button, Card, Flex, IconButton, Text, Tooltip } from "@radix-ui/themes";
+import { DesktopIcon, DotFilledIcon, TrashIcon } from "@radix-ui/react-icons";
+import type { Session } from "../../App";
 
-export function SessionItem() {
+interface SessionItemProps {
+  isSelected: boolean;
+  session: Session;
+  onDelete: () => void;
+  onSelect: () => void;
+  onToggleConnection: () => void;
+}
+
+export function SessionItem({
+  isSelected,
+  session,
+  onDelete,
+  onSelect,
+  onToggleConnection,
+}: SessionItemProps) {
+  const isConnected = session.status === "connected";
+
   return (
-    <Box>
-      <Card className="w-full h-full">
-        <div className="w-full flex items-center gap-3">
-          <DesktopIcon className="w-6 h-6" color="gray" />
-          <div className="flex-1 flex flex-col gap-1">
-            <span className="text-xs font-medium">Session 1</span>
-            <span className="text-xs text-slate-500">8.128.128.128</span>
-          </div>
-        </div>
-        <Flex align="center" gap="3" className="w-full mt-4">
-          <Button size="1" variant="outline">
-            Connect
+    <Card
+      asChild
+      className={[
+        "cursor-pointer border transition-colors",
+        isSelected ? "border-[color:var(--accent-a7)] bg-[var(--accent-a3)]" : "border-[color:var(--gray-a4)]",
+      ].join(" ")}
+      variant="surface"
+    >
+      <article onClick={onSelect}>
+        <Flex align="start" gap="3">
+          <Flex
+            className="h-11 w-11 shrink-0 rounded-md border border-[color:var(--gray-a5)] bg-[var(--gray-a3)]"
+            align="center"
+            justify="center"
+          >
+            <DesktopIcon className="h-5 w-5 text-[var(--gray-11)]" />
+          </Flex>
+
+          <Box className="min-w-0 flex-1">
+            <Flex align="center" gap="2">
+              <Text className="truncate" size="3" weight="bold">
+                {session.sessionName}
+              </Text>
+              <Badge color={isConnected ? "green" : "gray"} size="1" variant="soft">
+                <DotFilledIcon />
+                {isConnected ? "Online" : "Offline"}
+              </Badge>
+            </Flex>
+            <Text className="block truncate" color="gray" size="2">
+              {session.username}@{session.host}:{session.port}
+            </Text>
+          </Box>
+        </Flex>
+
+        <Flex align="center" gap="2" mt="4">
+          <Button
+            className="flex-1"
+            color={isConnected ? "gray" : "green"}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleConnection();
+            }}
+            size="2"
+            variant="surface"
+          >
+            {isConnected ? "Disconnect" : "Connect"}
           </Button>
-          <Button size="1" variant="outline">
+
+          <Button
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+            size="2"
+            variant="surface"
+          >
             Edit
           </Button>
-          <Button size="1" variant="outline">
-            Delete
-          </Button>
-        </Flex>
-      </Card>
-    </Box>
 
+          <Tooltip content="Delete session">
+            <IconButton
+              aria-label="Delete session"
+              color="red"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete();
+              }}
+              size="2"
+              variant="surface"
+            >
+              <TrashIcon />
+            </IconButton>
+          </Tooltip>
+        </Flex>
+      </article>
+    </Card>
   );
 }
