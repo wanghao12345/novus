@@ -47,8 +47,35 @@ pub async fn rename_item(
 // Cancel a transfer.
 #[tauri::command]
 pub async fn cancel_transfer(
+    transfer_id: String
+) -> Result<(), String> {
+    Ok(())
+}
+
+// Get the active transfers.
+#[tauri::command]
+pub async fn get_active_transfers() -> Result<Vec<String>, String> {
+    Ok(vec![])
+}
+
+// Copy a file or directory.
+#[tauri::command]
+pub async fn copy_item(
     connection_id: String,
+    source_path: String,
+    target_path: String,
+    is_directory: bool,
     window: Window
+) -> Result<(), String> {
+    Ok(())
+}
+
+// Move a file or directory.
+#[tauri::command]
+pub async fn move_item(
+    connection_id: String,
+    source_path: String,
+    target_path: String,
 ) -> Result<(), String> {
     Ok(())
 }

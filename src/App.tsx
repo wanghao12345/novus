@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Box, Flex, Text } from "@radix-ui/themes";
+import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { FileManager } from "./components/file-manager/FileManager";
 import { SessionBox } from "./components/session/SessionBox";
@@ -55,17 +56,64 @@ function App() {
     });
   };
 
-  const handleToggleConnection = (sessionId: string) => {
-    setSessions((currentSessions) =>
-      currentSessions.map((session) =>
-        session.id === sessionId
-          ? {
-              ...session,
-              status: session.status === "connected" ? "disconnected" : "connected",
-            }
-          : session,
-      ),
-    );
+  const handleToggleConnection = async (sessionId: string) => {
+    const session = sessions.find((currentSession) => currentSession.id === sessionId);
+
+    if (!session) {
+      return;
+    }
+
+    try {
+      if (session.status === "connected") {
+        if (isTauriRuntime() && session.connectionId) {
+          await invoke("disconnect_sftp", { connectionId: session.connectionId });
+        }
+
+        setSessions((currentSessions) =>
+          currentSessions.map((currentSession) =>
+            currentSession.id === sessionId
+              ? {
+                  ...currentSession,
+                  connectionId: undefined,
+                  status: "disconnected",
+                }
+              : currentSession,
+          ),
+        );
+        return;
+      }
+
+      if (!session.password) {
+        window.alert("Please edit this session and enter a password before connecting.");
+        return;
+      }
+
+      const connectionId = isTauriRuntime()
+        ? await invoke<string>("connect_sftp", {
+            config: {
+              host: session.host,
+              password: session.password,
+              port: session.port,
+              session_name: session.sessionName,
+              username: session.username,
+            },
+          })
+        : `preview-${session.id}`;
+
+      setSessions((currentSessions) =>
+        currentSessions.map((currentSession) =>
+          currentSession.id === sessionId
+            ? {
+                ...currentSession,
+                connectionId,
+                status: "connected",
+              }
+            : currentSession,
+        ),
+      );
+    } catch (error) {
+      window.alert(`Connection failed: ${String(error)}`);
+    }
   };
 
   return (
@@ -100,3 +148,7 @@ function App() {
 }
 
 export default App;
+
+function isTauriRuntime() {
+  return "__TAURI_INTERNALS__" in window;
+}

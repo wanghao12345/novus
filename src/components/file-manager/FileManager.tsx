@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Box, Flex, IconButton, Popover, ScrollArea, Text, Tooltip } from "@radix-ui/themes";
 import { BellIcon, GearIcon } from "@radix-ui/react-icons";
 import { fileEntries } from "../../data/files";
@@ -33,6 +33,21 @@ export function FileManager({ session }: FileManagerProps) {
   const activePath = isConnected ? pathHistory[historyIndex] ?? homePath : "Connect session to browse files";
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId) ?? tabs[0], [activeTabId, tabs]);
   const selectedFile = entries.find((entry) => entry.id === selectedFileId);
+
+  useEffect(() => {
+    setTabs((currentTabs) =>
+      currentTabs.map((tab) => {
+        const nextPath = tab.id === "home" ? homePath : tab.path.replace(/^\/home\/[^/]+\//, homePath);
+
+        return {
+          ...tab,
+          label: tab.id === "home" ? `${session.sessionName} Home` : `${getFolderName(nextPath)} - ${session.sessionName}`,
+          path: nextPath,
+        };
+      }),
+    );
+    setPathHistory((currentHistory) => currentHistory.map((path) => path.replace(/^\/home\/[^/]+\//, homePath)));
+  }, [homePath, session.sessionName]);
 
   const updatePath = (path: string) => {
     setPathHistory((currentHistory) => [...currentHistory.slice(0, historyIndex + 1), path]);
@@ -150,7 +165,7 @@ export function FileManager({ session }: FileManagerProps) {
           onOpenFolder={handleOpenFolder}
           onSelectFile={(entry) => {
             setSelectedFileId(entry.id);
-            setStatusMessage(`${entry.name} selected`);
+            setStatusMessage("Ready");
           }}
           selectedFileId={selectedFileId}
         />
@@ -189,4 +204,9 @@ function HeaderPopover({ children, icon, label }: { children: ReactNode; icon: R
       </Popover.Content>
     </Popover.Root>
   );
+}
+
+function getFolderName(path: string) {
+  const segments = path.split("/").filter(Boolean);
+  return segments[segments.length - 1] ?? "Home";
 }

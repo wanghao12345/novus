@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Card, Flex, IconButton, Text, Tooltip } from "@radix-ui/themes";
+import { Badge, Box, Button, Card, Flex, IconButton, Text } from "@radix-ui/themes";
 import { DesktopIcon, DotFilledIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import type { Session, SessionFormData } from "../../types/session";
 import { SessionDialog } from "./SessionDialog";
@@ -80,6 +80,7 @@ export function SessionItem({
         <SessionDialog
           initialValues={{
             host: session.host,
+            password: session.password,
             port: session.port,
             sessionName: session.sessionName,
             username: session.username,
@@ -87,11 +88,9 @@ export function SessionItem({
           mode="edit"
           onSubmit={onUpdate}
         >
-          <Tooltip content="Edit session">
-            <IconButton aria-label="Edit session" size="2" variant="surface">
-              <Pencil2Icon />
-            </IconButton>
-          </Tooltip>
+          <IconButton aria-label="Edit session" size="2" variant="surface">
+            <Pencil2Icon />
+          </IconButton>
         </SessionDialog>
 
         <DeleteSessionDialog sessionName={session.sessionName} onDelete={onDelete} />

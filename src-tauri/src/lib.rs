@@ -7,7 +7,6 @@ use sftp::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
@@ -18,6 +17,10 @@ pub fn run() {
             delete_directory,
             upload_file,
             download_file,
+            copy_item,
+            move_item,
+            cancel_transfer,
+            get_active_transfers,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -13,6 +13,7 @@ interface SessionDialogProps {
 const defaultValues: SessionFormData = {
   sessionName: "",
   host: "",
+  password: "",
   port: 22,
   username: "",
 };
@@ -113,6 +114,19 @@ export function SessionDialog({ children, initialValues, mode, onSubmit }: Sessi
                 <FieldError message={errors.port?.message} />
               </label>
             </Flex>
+
+            <label>
+              <Text as="div" size="2" mb="1" weight="bold">
+                Password
+              </Text>
+              <Controller
+                control={control}
+                name="password"
+                rules={{ required: "Please enter a password." }}
+                render={({ field }) => <TextField.Root {...field} placeholder="Enter password" type="password" />}
+              />
+              <FieldError message={errors.password?.message} />
+            </label>
           </Flex>
 
           <Flex gap="3" mt="5" justify="end">
