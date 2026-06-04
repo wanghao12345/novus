@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ConnectionConfig {
+    pub session_name: String,
     pub host: String,
     pub port: u16,
     pub username: String,

@@ -10,6 +10,7 @@ use crate::{
 
 #[tauri::command]
 pub async fn connect_sftp(config: ConnectionConfig) -> Result<String, String> {
+    dbg!(&config);
     // 1、Create TCP stream
     let tcp = TcpStream::connect(format!("{}:{}", config.host, config.port)).map_err(|e| {
         format!(
@@ -55,6 +56,7 @@ pub async fn connect_sftp(config: ConnectionConfig) -> Result<String, String> {
     let connection_id = Uuid::new_v4().to_string();
     let meta = ConnectionMeta {
         id: connection_id.clone(),
+        session_name: config.session_name.clone(),
         host: config.host.clone(),
         username: config.username.clone(),
     };
@@ -69,7 +71,8 @@ pub async fn connect_sftp(config: ConnectionConfig) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn disconnect_sftp() -> Result<(), String> {
+pub async fn disconnect_sftp(connection_id: String) -> Result<(), String> {
     // 实现SFTP断开连接逻辑
+    CONNECTION_POOL.remove(&connection_id);
     Ok(())
 }

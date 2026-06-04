@@ -12,6 +12,7 @@ pub struct ConnectionMeta {
     pub id: String,
     pub host: String,
     pub username: String,
+    pub session_name: String,
 }
 
 pub struct ConnectionPool {
