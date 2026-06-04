@@ -1,16 +1,17 @@
 import { Box, Button, Flex, Heading, ScrollArea, Text } from "@radix-ui/themes";
 import { PlusIcon } from "@radix-ui/react-icons";
-import type { Session } from "../../App";
-import { SessionCreate, type SessionCreateFormData } from "./SessionCreate";
+import type { Session, SessionFormData } from "../../types/session";
+import { SessionDialog } from "./SessionDialog";
 import { SessionItem } from "./SessionItem";
 
 interface SessionBoxProps {
   sessions: Session[];
   selectedSessionId: string;
-  onCreateSession: (session: SessionCreateFormData) => void;
+  onCreateSession: (session: SessionFormData) => void;
   onDeleteSession: (sessionId: string) => void;
   onSelectSession: (sessionId: string) => void;
   onToggleConnection: (sessionId: string) => void;
+  onUpdateSession: (sessionId: string, session: SessionFormData) => void;
 }
 
 export function SessionBox({
@@ -20,6 +21,7 @@ export function SessionBox({
   onDeleteSession,
   onSelectSession,
   onToggleConnection,
+  onUpdateSession,
 }: SessionBoxProps) {
   return (
     <Flex className="h-full" direction="column">
@@ -37,27 +39,42 @@ export function SessionBox({
           </Text>
         </Box>
 
-        <SessionCreate onCreateSession={onCreateSession}>
+        <SessionDialog mode="create" onSubmit={onCreateSession}>
           <Button size="2" variant="surface">
             <PlusIcon />
             New Session
           </Button>
-        </SessionCreate>
+        </SessionDialog>
       </Flex>
 
       <ScrollArea className="min-h-0 flex-1">
-        <Flex className="p-3" direction="column" gap="3">
-          {sessions.map((session) => (
-            <SessionItem
-              isSelected={session.id === selectedSessionId}
-              key={session.id}
-              session={session}
-              onDelete={() => onDeleteSession(session.id)}
-              onSelect={() => onSelectSession(session.id)}
-              onToggleConnection={() => onToggleConnection(session.id)}
-            />
-          ))}
-        </Flex>
+        {sessions.length > 0 ? (
+          <Flex className="p-3" direction="column" gap="3">
+            {sessions.map((session) => (
+              <SessionItem
+                isSelected={session.id === selectedSessionId}
+                key={session.id}
+                session={session}
+                onDelete={() => onDeleteSession(session.id)}
+                onSelect={() => onSelectSession(session.id)}
+                onToggleConnection={() => onToggleConnection(session.id)}
+                onUpdate={(formData) => onUpdateSession(session.id, formData)}
+              />
+            ))}
+          </Flex>
+        ) : (
+          <Flex className="h-full p-5 text-center" align="center" direction="column" justify="center">
+            <Text color="gray" size="2">
+              No sessions yet.
+            </Text>
+            <SessionDialog mode="create" onSubmit={onCreateSession}>
+              <Button mt="3" size="2" variant="surface">
+                <PlusIcon />
+                Create Session
+              </Button>
+            </SessionDialog>
+          </Flex>
+        )}
       </ScrollArea>
     </Flex>
   );

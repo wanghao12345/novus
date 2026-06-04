@@ -1,37 +1,37 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Button, Dialog, Flex, Text, TextField } from "@radix-ui/themes";
 import { Controller, type SubmitHandler, useForm } from "react-hook-form";
+import type { SessionFormData } from "../../types/session";
 
-interface SessionCreateProps {
+interface SessionDialogProps {
   children: ReactNode;
-  onCreateSession: (session: SessionCreateFormData) => void;
+  initialValues?: SessionFormData;
+  mode: "create" | "edit";
+  onSubmit: (session: SessionFormData) => void;
 }
 
-export interface SessionCreateFormData {
-  sessionName: string;
-  host: string;
-  port: number;
-  username: string;
-}
-
-const defaultValues: SessionCreateFormData = {
+const defaultValues: SessionFormData = {
   sessionName: "",
   host: "",
   port: 22,
   username: "",
 };
 
-export function SessionCreate({ children, onCreateSession }: SessionCreateProps) {
+export function SessionDialog({ children, initialValues, mode, onSubmit }: SessionDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const {
     control,
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<SessionCreateFormData>({ defaultValues });
+  } = useForm<SessionFormData>({ defaultValues: initialValues ?? defaultValues });
 
-  const onSubmit: SubmitHandler<SessionCreateFormData> = (data) => {
-    onCreateSession({
+  useEffect(() => {
+    reset(initialValues ?? defaultValues);
+  }, [initialValues, isOpen, reset]);
+
+  const handleFormSubmit: SubmitHandler<SessionFormData> = (data) => {
+    onSubmit({
       ...data,
       port: Number(data.port),
     });
@@ -44,10 +44,10 @@ export function SessionCreate({ children, onCreateSession }: SessionCreateProps)
       <Dialog.Trigger>{children}</Dialog.Trigger>
 
       <Dialog.Content maxWidth="440px">
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <Dialog.Title>Create Session</Dialog.Title>
+        <form onSubmit={handleSubmit(handleFormSubmit)}>
+          <Dialog.Title>{mode === "create" ? "Create Session" : "Edit Session"}</Dialog.Title>
           <Dialog.Description color="gray" size="2" mb="4">
-            Save a server profile for browsing remote files.
+            {mode === "create" ? "Save a server profile for browsing remote files." : "Update this server profile."}
           </Dialog.Description>
 
           <Flex direction="column" gap="3">
@@ -61,11 +61,7 @@ export function SessionCreate({ children, onCreateSession }: SessionCreateProps)
                 rules={{ required: "Please enter a session name." }}
                 render={({ field }) => <TextField.Root {...field} placeholder="Production Server" />}
               />
-              {errors.sessionName ? (
-                <Text color="red" size="1">
-                  {errors.sessionName.message}
-                </Text>
-              ) : null}
+              <FieldError message={errors.sessionName?.message} />
             </label>
 
             <label>
@@ -78,15 +74,11 @@ export function SessionCreate({ children, onCreateSession }: SessionCreateProps)
                 rules={{ required: "Please enter a host." }}
                 render={({ field }) => <TextField.Root {...field} placeholder="192.168.1.100" />}
               />
-              {errors.host ? (
-                <Text color="red" size="1">
-                  {errors.host.message}
-                </Text>
-              ) : null}
+              <FieldError message={errors.host?.message} />
             </label>
 
             <Flex gap="3">
-              <BoxField className="flex-1">
+              <label className="flex-1">
                 <Text as="div" size="2" mb="1" weight="bold">
                   Username
                 </Text>
@@ -96,14 +88,10 @@ export function SessionCreate({ children, onCreateSession }: SessionCreateProps)
                   rules={{ required: "Please enter a username." }}
                   render={({ field }) => <TextField.Root {...field} placeholder="root" />}
                 />
-                {errors.username ? (
-                  <Text color="red" size="1">
-                    {errors.username.message}
-                  </Text>
-                ) : null}
-              </BoxField>
+                <FieldError message={errors.username?.message} />
+              </label>
 
-              <BoxField className="w-[112px]">
+              <label className="w-[112px]">
                 <Text as="div" size="2" mb="1" weight="bold">
                   Port
                 </Text>
@@ -122,12 +110,8 @@ export function SessionCreate({ children, onCreateSession }: SessionCreateProps)
                     />
                   )}
                 />
-                {errors.port ? (
-                  <Text color="red" size="1">
-                    {errors.port.message}
-                  </Text>
-                ) : null}
-              </BoxField>
+                <FieldError message={errors.port?.message} />
+              </label>
             </Flex>
           </Flex>
 
@@ -137,7 +121,7 @@ export function SessionCreate({ children, onCreateSession }: SessionCreateProps)
                 Cancel
               </Button>
             </Dialog.Close>
-            <Button type="submit">Create</Button>
+            <Button type="submit">{mode === "create" ? "Create" : "Save"}</Button>
           </Flex>
         </form>
       </Dialog.Content>
@@ -145,6 +129,14 @@ export function SessionCreate({ children, onCreateSession }: SessionCreateProps)
   );
 }
 
-function BoxField({ children, className }: { children: ReactNode; className: string }) {
-  return <label className={className}>{children}</label>;
+function FieldError({ message }: { message?: string }) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <Text color="red" size="1">
+      {message}
+    </Text>
+  );
 }

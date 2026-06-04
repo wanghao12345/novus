@@ -13,6 +13,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             connect_sftp,
             disconnect_sftp,
+            list_directory,
+            create_directory,
+            delete_directory,
+            upload_file,
+            download_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

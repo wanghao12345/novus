@@ -3,34 +3,8 @@ import { Box, Flex, Text } from "@radix-ui/themes";
 import "./App.css";
 import { FileManager } from "./components/file-manager/FileManager";
 import { SessionBox } from "./components/session/SessionBox";
-
-export interface Session {
-  id: string;
-  sessionName: string;
-  host: string;
-  port: number;
-  username: string;
-  status: "connected" | "disconnected";
-}
-
-const initialSessions: Session[] = [
-  {
-    id: "secret-server",
-    sessionName: "Secret Server",
-    host: "159.89.169.100",
-    port: 22,
-    username: "root",
-    status: "connected",
-  },
-  {
-    id: "staging-node",
-    sessionName: "Staging Node",
-    host: "10.18.24.11",
-    port: 22,
-    username: "deploy",
-    status: "disconnected",
-  },
-];
+import { initialSessions } from "./data/sessions";
+import type { Session, SessionFormData } from "./types/session";
 
 function App() {
   const [sessions, setSessions] = useState<Session[]>(initialSessions);
@@ -41,7 +15,7 @@ function App() {
     [selectedSessionId, sessions],
   );
 
-  const handleCreateSession = (session: Omit<Session, "id" | "status">) => {
+  const handleCreateSession = (session: SessionFormData) => {
     const createdSession: Session = {
       ...session,
       id: crypto.randomUUID(),
@@ -52,15 +26,32 @@ function App() {
     setSelectedSessionId(createdSession.id);
   };
 
-  const handleDeleteSession = (sessionId: string) => {
-    setSessions((currentSessions) => currentSessions.filter((session) => session.id !== sessionId));
-    setSelectedSessionId((currentId) => {
-      if (currentId !== sessionId) {
-        return currentId;
-      }
+  const handleUpdateSession = (sessionId: string, formData: SessionFormData) => {
+    setSessions((currentSessions) =>
+      currentSessions.map((session) =>
+        session.id === sessionId
+          ? {
+              ...session,
+              ...formData,
+            }
+          : session,
+      ),
+    );
+  };
 
-      const nextSession = sessions.find((session) => session.id !== sessionId);
-      return nextSession?.id ?? "";
+  const handleDeleteSession = (sessionId: string) => {
+    setSessions((currentSessions) => {
+      const nextSessions = currentSessions.filter((session) => session.id !== sessionId);
+
+      setSelectedSessionId((currentId) => {
+        if (currentId !== sessionId) {
+          return currentId;
+        }
+
+        return nextSessions[0]?.id ?? "";
+      });
+
+      return nextSessions;
     });
   };
 
@@ -88,12 +79,13 @@ function App() {
             onDeleteSession={handleDeleteSession}
             onSelectSession={setSelectedSessionId}
             onToggleConnection={handleToggleConnection}
+            onUpdateSession={handleUpdateSession}
           />
         </Box>
 
         <Box className="min-w-0 flex-1">
           {selectedSession ? (
-            <FileManager session={selectedSession} />
+            <FileManager key={selectedSession.id} session={selectedSession} />
           ) : (
             <Flex className="h-full" align="center" justify="center">
               <Text color="gray" size="3">
