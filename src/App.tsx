@@ -66,7 +66,7 @@ function App() {
             },
           })
         : `preview-${session.id}`;
-
+      console.log(`Connected to ${session.host} as ${session.username}, connectionId: ${connectionId}`);
       setConnectionState(sessionId, "connected", connectionId);
     } catch (error) {
       window.alert(`Connection failed: ${String(error)}`);

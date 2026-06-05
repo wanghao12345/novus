@@ -5,10 +5,17 @@ mod sftp;
 
 use sftp::*;
 
+use crate::sftp::connection_pool::start_heartbeat_task;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            let app_handle = app.handle().clone();
+            start_heartbeat_task(app_handle);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             connect_sftp,
             disconnect_sftp,

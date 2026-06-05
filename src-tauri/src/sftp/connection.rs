@@ -4,7 +4,7 @@ use ssh2::Session;
 use uuid::Uuid;
 
 use crate::{
-    sftp::connection_pool::{ConnectionMeta, ConnectionPool, CONNECTION_POOL},
+    sftp::connection_pool::{ConnectionMeta, SftpSession, CONNECTION_POOL},
     types::*,
 };
 
@@ -60,7 +60,7 @@ pub async fn connect_sftp(config: ConnectionConfig) -> Result<String, String> {
         host: config.host.clone(),
         username: config.username.clone(),
     };
-    let connection = Arc::new(ConnectionPool {
+    let connection = Arc::new(SftpSession {
         meta: meta.clone(),
         session,
         sftp,
