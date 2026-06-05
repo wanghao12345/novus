@@ -39,7 +39,7 @@ export function FileToolbar({
 }: FileToolbarProps) {
   return (
     <Flex className="shrink-0 border-b border-[color:var(--gray-a5)] p-3" align="center" gap="2">
-      <Flex className="overflow-hidden rounded-md border border-[color:var(--gray-a5)]">
+      <Flex className="overflow-hidden rounded-md">
         <Tooltip content="Back">
           <IconButton aria-label="Back" disabled={!canGoBack} onClick={onGoBack} size="3" variant="surface">
             <ChevronLeftIcon />
@@ -58,7 +58,7 @@ export function FileToolbar({
         </IconButton>
       </Tooltip>
 
-      <TextField.Root className="min-w-0 flex-1" readOnly value={path} />
+      <TextField.Root className="min-w-0 flex-1" readOnly value={path} size="3" />
 
       <Tooltip content={selectedCount > 0 ? "Download selected" : "Select a file first"}>
         <IconButton

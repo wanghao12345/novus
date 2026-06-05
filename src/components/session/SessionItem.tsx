@@ -28,8 +28,8 @@ export function SessionItem({
       className={[
         "border transition-colors",
         isSelected
-          ? "border-[color:var(--accent-a7)] bg-[var(--accent-a3)] shadow-[0_0_0_1px_var(--accent-a4)]"
-          : "border-[color:var(--gray-a4)] bg-[var(--gray-a2)]",
+          ? "border-[#A144AF] bg-[var(--gray-a1)]"
+          : "border-[color:var(--gray-a2)] bg-[var(--gray-a1)]",
       ].join(" ")}
       variant="surface"
     >

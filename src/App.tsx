@@ -117,7 +117,7 @@ function App() {
   };
 
   return (
-    <main className="h-screen w-full overflow-hidden bg-[var(--color-background)] text-[var(--gray-12)]">
+    <main className="h-screen box-border border-t border-[color:var(--gray-a5)] w-full overflow-hidden bg-[var(--color-background)] text-[var(--gray-12)]">
       <Flex className="h-full w-full">
         <Box className="h-full w-[360px] shrink-0 border-r border-[color:var(--gray-a5)] bg-[var(--gray-a2)]">
           <SessionBox

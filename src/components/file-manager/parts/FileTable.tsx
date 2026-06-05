@@ -20,7 +20,7 @@ export function FileTable({
   onSelectFile,
 }: FileTableProps) {
   return (
-    <Table.Root className="w-full table-fixed" variant="surface">
+    <Table.Root className="table-fixed m-2" variant="surface">
       <Table.Header>
         <Table.Row>
           <Table.ColumnHeaderCell className="w-auto">File Name</Table.ColumnHeaderCell>

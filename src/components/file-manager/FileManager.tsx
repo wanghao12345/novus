@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { Box, Flex, IconButton, Popover, ScrollArea, Text, Tooltip } from "@radix-ui/themes";
+import { Box, Card, Flex, IconButton, Popover, ScrollArea, Text, Tooltip } from "@radix-ui/themes";
 import { BellIcon, GearIcon } from "@radix-ui/react-icons";
 import { fileEntries } from "../../data/files";
 import type { Session } from "../../types/session";
@@ -111,7 +111,7 @@ export function FileManager({ session }: FileManagerProps) {
 
   return (
     <Flex className="h-full min-w-0 bg-[var(--gray-1)]" direction="column">
-      <Flex className="h-[76px] shrink-0 border-b border-[color:var(--gray-a5)] px-4" align="center" justify="between">
+      {/* <Flex className="h-[76px] shrink-0 border-b border-[color:var(--gray-a5)] px-4" align="center" justify="between">
         <FileTabs activeTabId={activeTabId} onCloseTab={handleCloseTab} onSelectTab={handleSelectTab} tabs={tabs} />
 
         <Flex align="center" gap="2">
@@ -127,7 +127,7 @@ export function FileManager({ session }: FileManagerProps) {
             </Text>
           </HeaderPopover>
         </Flex>
-      </Flex>
+      </Flex> */}
 
       <FileToolbar
         canGoBack={isConnected && historyIndex > 0}
@@ -155,7 +155,7 @@ export function FileManager({ session }: FileManagerProps) {
         selectedCount={selectedFile ? 1 : 0}
       />
 
-      <FileBreadcrumbs activeTab={activeTab} sessionName={session.sessionName} />
+      {/* <FileBreadcrumbs activeTab={activeTab} sessionName={session.sessionName} /> */}
 
       <ScrollArea className="min-h-0 flex-1">
         <FileTable
