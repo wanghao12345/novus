@@ -78,6 +78,15 @@ const useSessionStore = create<SessionStore>()(
         },
       }),
       {
+        merge: (persistedState, currentState) => {
+          const persisted = persistedState as Partial<SessionStore> | undefined;
+
+          return {
+            ...currentState,
+            ...persisted,
+            sessions: normalizeSessions(persisted?.sessions ?? currentState.sessions),
+          };
+        },
         name: "sftp-sessions",
         partialize: (state) => ({
           selectedSessionId: state.selectedSessionId,
@@ -92,3 +101,14 @@ const useSessionStore = create<SessionStore>()(
 );
 
 export default useSessionStore;
+
+function normalizeSessions(sessions: Session[]) {
+  return sessions.map((session) =>
+    session.status === "connected" && !session.connectionId
+      ? {
+          ...session,
+          status: "disconnected" as const,
+        }
+      : session,
+  );
+}

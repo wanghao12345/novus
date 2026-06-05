@@ -8,7 +8,7 @@ export const initialSessions: Session[] = [
     password: "",
     port: 22,
     username: "root",
-    status: "connected",
+    status: "disconnected",
   },
   {
     id: "staging-node",

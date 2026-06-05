@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Flex, ScrollArea } from "@radix-ui/themes";
 import { fileEntries } from "../../data/files";
+import { listDirectory } from "../../services/sftpDirectory";
 import type { Session } from "../../types/session";
 import type { FileDensity, FileEntry } from "../../types/file-manager";
 import { FileStatusBar } from "./parts/FileStatusBar";
@@ -13,32 +14,71 @@ interface FileManagerProps {
 
 export function FileManager({ session }: FileManagerProps) {
   const isConnected = session.status === "connected";
-  const homePath = `/home/${session.username}/`;
+  const rootPath = "/";
   const [density, setDensity] = useState<FileDensity>("comfortable");
   const [entries, setEntries] = useState<FileEntry[]>(fileEntries);
-  const [pathHistory, setPathHistory] = useState([homePath]);
+  const [pathHistory, setPathHistory] = useState([rootPath]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [selectedFileId, setSelectedFileId] = useState<string>();
   const [statusMessage, setStatusMessage] = useState("Ready");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const activePath = isConnected ? pathHistory[historyIndex] ?? homePath : "Connect session to browse files";
+  const activePath = isConnected ? pathHistory[historyIndex] ?? rootPath : "Connect session to browse files";
   const selectedFile = entries.find((entry) => entry.id === selectedFileId);
 
+  const loadDirectory = useCallback(
+    async (path: string) => {
+      if (!isConnected || !session.connectionId) {
+        setEntries(fileEntries);
+        setStatusMessage(isConnected ? "No active SFTP connection id" : "Connect session to browse files");
+        return;
+      }
+
+      if (!isTauriRuntime()) {
+        setEntries(fileEntries);
+        setStatusMessage("Preview data loaded");
+        return;
+      }
+
+      setIsLoading(true);
+      setStatusMessage("Loading directory...");
+
+      try {
+        const nextEntries = await listDirectory({
+          connectionId: session.connectionId,
+          path,
+        });
+
+        setEntries(nextEntries);
+        setStatusMessage(nextEntries.length > 0 ? "Directory loaded" : "Directory is empty");
+      } catch (error) {
+        setEntries([]);
+        setStatusMessage(`Failed to load directory: ${String(error)}`);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [isConnected, session.connectionId],
+  );
+
   useEffect(() => {
-    setPathHistory([homePath]);
+    setPathHistory([rootPath]);
     setHistoryIndex(0);
     setSelectedFileId(undefined);
     setStatusMessage("Ready");
-  }, [homePath, session.id]);
+    void loadDirectory(rootPath);
+  }, [rootPath, session.id, loadDirectory]);
 
   const updatePath = (path: string) => {
     setPathHistory((currentHistory) => [...currentHistory.slice(0, historyIndex + 1), path]);
     setHistoryIndex((currentIndex) => currentIndex + 1);
     setSelectedFileId(undefined);
+    void loadDirectory(path);
   };
 
   const handleOpenFolder = (entry: FileEntry) => {
-    const nextPath = `${homePath}${entry.name}/`;
+    const currentPath = pathHistory[historyIndex] ?? rootPath;
+    const nextPath = ensureDirectoryPath(entry.path || joinRemotePath(currentPath, entry.name));
 
     updatePath(nextPath);
     setStatusMessage(`Opened ${entry.name}`);
@@ -47,9 +87,11 @@ export function FileManager({ session }: FileManagerProps) {
   const handleCreateFolder = () => {
     const folderNumber = entries.filter((entry) => entry.type === "folder").length + 1;
     const folderName = `new-folder-${folderNumber}`;
+    const currentPath = pathHistory[historyIndex] ?? rootPath;
+    const folderPath = joinRemotePath(currentPath, folderName);
 
     setEntries((currentEntries) => [
-      { id: `folder-${Date.now()}`, name: folderName, type: "folder", modifiedAt: "Just now" },
+      { id: `folder-${Date.now()}`, name: folderName, path: folderPath, type: "folder", modifiedAt: "Just now" },
       ...currentEntries,
     ]);
     setStatusMessage(`Created ${folderName}`);
@@ -68,16 +110,22 @@ export function FileManager({ session }: FileManagerProps) {
         onCreateFolder={handleCreateFolder}
         onDownload={() => setStatusMessage(selectedFile ? `Queued download for ${selectedFile.name}` : "Select a file first")}
         onGoBack={() => {
-          setHistoryIndex((currentIndex) => Math.max(0, currentIndex - 1));
+          const nextIndex = Math.max(0, historyIndex - 1);
+          setHistoryIndex(nextIndex);
           setSelectedFileId(undefined);
+          void loadDirectory(pathHistory[nextIndex] ?? rootPath);
           setStatusMessage("Moved back");
         }}
         onGoForward={() => {
-          setHistoryIndex((currentIndex) => Math.min(pathHistory.length - 1, currentIndex + 1));
+          const nextIndex = Math.min(pathHistory.length - 1, historyIndex + 1);
+          setHistoryIndex(nextIndex);
           setSelectedFileId(undefined);
+          void loadDirectory(pathHistory[nextIndex] ?? rootPath);
           setStatusMessage("Moved forward");
         }}
-        onRefresh={() => setStatusMessage("Folder refreshed")}
+        onRefresh={() => {
+          void loadDirectory(activePath);
+        }}
         onUpload={() => setStatusMessage("Upload action is ready to connect to the backend")}
         path={activePath}
         selectedCount={selectedFile ? 1 : 0}
@@ -87,7 +135,7 @@ export function FileManager({ session }: FileManagerProps) {
         <FileTable
           density={density}
           entries={entries}
-          isDisabled={!isConnected}
+          isDisabled={!isConnected || isLoading}
           onOpenFolder={handleOpenFolder}
           onSelectFile={(entry) => {
             setSelectedFileId(entry.id);
@@ -108,4 +156,17 @@ export function FileManager({ session }: FileManagerProps) {
       />
     </Flex>
   );
+}
+
+function isTauriRuntime() {
+  return "__TAURI_INTERNALS__" in window;
+}
+
+function joinRemotePath(basePath: string, name: string) {
+  const normalizedBase = basePath.endsWith("/") ? basePath : `${basePath}/`;
+  return `${normalizedBase}${name}/`;
+}
+
+function ensureDirectoryPath(path: string) {
+  return path.endsWith("/") ? path : `${path}/`;
 }
