@@ -1,9 +1,11 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use ssh2::{Session, Sftp};
+use tauri::AppHandle;
+use tokio::time::interval;
 
 
 
@@ -22,3 +24,15 @@ pub struct ConnectionPool {
 }
 
 pub static CONNECTION_POOL: Lazy<DashMap<String, Arc<ConnectionPool>>> = Lazy::new(DashMap::new);
+
+pub fn start_heartbeat_task(app_handle: AppHandle) {
+    tokio::spawn(async move {
+        let mut ticker = interval(Duration::from_secs(30));
+
+        loop {
+            ticker.tick().await;
+
+            
+        }
+    });
+}

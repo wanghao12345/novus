@@ -1,5 +1,9 @@
 import { Box, Flex, Table, Text } from "@radix-ui/themes";
-import { ArchiveIcon, FileIcon } from "@radix-ui/react-icons";
+import fileDefaultIcon from "../../../assets/icons/file-default.png";
+import filePdfIcon from "../../../assets/icons/file-pdf.png";
+import fileTxtIcon from "../../../assets/icons/file-txt.png";
+import fileZipIcon from "../../../assets/icons/file-zip.png";
+import folderBlueIcon from "../../../assets/icons/folder-blue.png";
 import type { FileDensity, FileEntry } from "../../../types/file-manager";
 
 interface FileTableProps {
@@ -20,7 +24,7 @@ export function FileTable({
   onSelectFile,
 }: FileTableProps) {
   return (
-    <Table.Root className="table-fixed m-2" variant="surface">
+    <Table.Root className="m-2 w-[calc(100%-1rem)] table-fixed overflow-hidden" variant="surface">
       <Table.Header>
         <Table.Row>
           <Table.ColumnHeaderCell className="w-auto">File Name</Table.ColumnHeaderCell>
@@ -90,11 +94,7 @@ function FileRow({
             align="center"
             justify="center"
           >
-            {isFolder ? (
-              <ArchiveIcon className="h-5 w-5 text-[var(--amber-10)]" />
-            ) : (
-              <FileIcon className="h-5 w-5 text-[var(--gray-11)]" />
-            )}
+            <img alt="" className="h-7 w-7 object-contain" draggable={false} src={getFileIcon(entry)} />
           </Flex>
           <Box className="min-w-0">
             <Text className="block truncate" size="3" weight="bold">
@@ -118,4 +118,21 @@ function FileRow({
       </Table.Cell>
     </Table.Row>
   );
+}
+
+function getFileIcon(entry: FileEntry) {
+  if (entry.type === "folder") {
+    return folderBlueIcon;
+  }
+
+  switch (entry.extension) {
+    case "pdf":
+      return filePdfIcon;
+    case "txt":
+      return fileTxtIcon;
+    case "zip":
+      return fileZipIcon;
+    default:
+      return fileDefaultIcon;
+  }
 }

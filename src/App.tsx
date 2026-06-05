@@ -1,15 +1,20 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Box, Flex, Text } from "@radix-ui/themes";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { FileManager } from "./components/file-manager/FileManager";
 import { SessionBox } from "./components/session/SessionBox";
-import { initialSessions } from "./data/sessions";
-import type { Session, SessionFormData } from "./types/session";
+import useSessionStore from "./store/session.store";
+import type { SessionFormData } from "./types/session";
 
 function App() {
-  const [sessions, setSessions] = useState<Session[]>(initialSessions);
-  const [selectedSessionId, setSelectedSessionId] = useState(initialSessions[0]?.id ?? "");
+  const sessions = useSessionStore((state) => state.sessions);
+  const selectedSessionId = useSessionStore((state) => state.selectedSessionId);
+  const createSession = useSessionStore((state) => state.createSession);
+  const deleteSession = useSessionStore((state) => state.deleteSession);
+  const selectSession = useSessionStore((state) => state.selectSession);
+  const setConnectionState = useSessionStore((state) => state.setConnectionState);
+  const updateSession = useSessionStore((state) => state.updateSession);
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedSessionId),
@@ -17,43 +22,15 @@ function App() {
   );
 
   const handleCreateSession = (session: SessionFormData) => {
-    const createdSession: Session = {
-      ...session,
-      id: crypto.randomUUID(),
-      status: "disconnected",
-    };
-
-    setSessions((currentSessions) => [createdSession, ...currentSessions]);
-    setSelectedSessionId(createdSession.id);
+    createSession(session);
   };
 
   const handleUpdateSession = (sessionId: string, formData: SessionFormData) => {
-    setSessions((currentSessions) =>
-      currentSessions.map((session) =>
-        session.id === sessionId
-          ? {
-              ...session,
-              ...formData,
-            }
-          : session,
-      ),
-    );
+    updateSession(sessionId, formData);
   };
 
   const handleDeleteSession = (sessionId: string) => {
-    setSessions((currentSessions) => {
-      const nextSessions = currentSessions.filter((session) => session.id !== sessionId);
-
-      setSelectedSessionId((currentId) => {
-        if (currentId !== sessionId) {
-          return currentId;
-        }
-
-        return nextSessions[0]?.id ?? "";
-      });
-
-      return nextSessions;
-    });
+    deleteSession(sessionId);
   };
 
   const handleToggleConnection = async (sessionId: string) => {
@@ -69,17 +46,7 @@ function App() {
           await invoke("disconnect_sftp", { connectionId: session.connectionId });
         }
 
-        setSessions((currentSessions) =>
-          currentSessions.map((currentSession) =>
-            currentSession.id === sessionId
-              ? {
-                  ...currentSession,
-                  connectionId: undefined,
-                  status: "disconnected",
-                }
-              : currentSession,
-          ),
-        );
+        setConnectionState(sessionId, "disconnected");
         return;
       }
 
@@ -100,17 +67,7 @@ function App() {
           })
         : `preview-${session.id}`;
 
-      setSessions((currentSessions) =>
-        currentSessions.map((currentSession) =>
-          currentSession.id === sessionId
-            ? {
-                ...currentSession,
-                connectionId,
-                status: "connected",
-              }
-            : currentSession,
-        ),
-      );
+      setConnectionState(sessionId, "connected", connectionId);
     } catch (error) {
       window.alert(`Connection failed: ${String(error)}`);
     }
@@ -125,7 +82,7 @@ function App() {
             selectedSessionId={selectedSessionId}
             onCreateSession={handleCreateSession}
             onDeleteSession={handleDeleteSession}
-            onSelectSession={setSelectedSessionId}
+            onSelectSession={selectSession}
             onToggleConnection={handleToggleConnection}
             onUpdateSession={handleUpdateSession}
           />
@@ -133,7 +90,7 @@ function App() {
 
         <Box className="min-w-0 flex-1">
           {selectedSession ? (
-            <FileManager key={selectedSession.id} session={selectedSession} />
+            <FileManager session={selectedSession} />
           ) : (
             <Flex className="h-full" align="center" justify="center">
               <Text color="gray" size="3">

@@ -8,9 +8,3 @@ export interface FileEntry {
 }
 
 export type FileDensity = "compact" | "comfortable";
-
-export interface FileTab {
-  id: string;
-  path: string;
-  label: string;
-}

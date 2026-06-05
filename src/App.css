@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+:root {
+  --novus-accent: #A144AF;
+  --novus-accent-hover: #B45BC0;
+  --novus-accent-soft: rgba(161, 68, 175, 0.16);
+  --novus-accent-border: rgba(161, 68, 175, 0.52);
+}
+
+.radix-themes {
+  --accent-9: var(--novus-accent);
+  --accent-10: var(--novus-accent-hover);
+  --accent-11: #D88BE0;
+  --accent-a3: var(--novus-accent-soft);
+  --accent-a5: rgba(161, 68, 175, 0.28);
+  --accent-a7: var(--novus-accent-border);
+  --accent-a9: var(--novus-accent);
+}
