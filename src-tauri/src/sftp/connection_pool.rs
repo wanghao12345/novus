@@ -47,9 +47,8 @@ pub fn start_heartbeat_task(app_handle: AppHandle) {
             if !dead_connections.is_empty() {
                 for conn_id in &dead_connections {
                     CONNECTION_POOL.remove(conn_id);
+                    let _ = app_handle.emit("connection_dead", conn_id);
                 }
-
-                let _ =app_handle.emit("connection_dead", dead_connections);
             }
 
         }

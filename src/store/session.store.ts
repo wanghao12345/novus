@@ -8,6 +8,8 @@ interface SessionStore {
   selectedSessionId: string;
   createSession: (session: SessionFormData) => Session;
   deleteSession: (sessionId: string) => void;
+  disconnectAllSessions: () => void;
+  markConnectionDead: (connectionId: string) => void;
   selectSession: (sessionId: string) => void;
   setConnectionState: (sessionId: string, status: Session["status"], connectionId?: string) => void;
   updateSession: (sessionId: string, session: SessionFormData) => void;
@@ -46,6 +48,26 @@ const useSessionStore = create<SessionStore>()(
           });
         },
 
+        disconnectAllSessions: () => {
+          set((state) => ({
+            sessions: normalizeSessions(state.sessions),
+          }));
+        },
+
+        markConnectionDead: (connectionId) => {
+          set((state) => ({
+            sessions: state.sessions.map((session) =>
+              session.connectionId === connectionId
+                ? {
+                    ...session,
+                    connectionId: undefined,
+                    status: "disconnected",
+                  }
+                : session,
+            ),
+          }));
+        },
+
         selectSession: (sessionId) => {
           set({ selectedSessionId: sessionId });
         },
@@ -56,7 +78,7 @@ const useSessionStore = create<SessionStore>()(
               session.id === sessionId
                 ? {
                     ...session,
-                    connectionId,
+                    connectionId: status === "connected" ? connectionId : undefined,
                     status,
                   }
                 : session,
@@ -84,13 +106,13 @@ const useSessionStore = create<SessionStore>()(
           return {
             ...currentState,
             ...persisted,
-            sessions: normalizeSessions(persisted?.sessions ?? currentState.sessions),
+            sessions: persisted?.sessions ?? currentState.sessions,
           };
         },
         name: "sftp-sessions",
         partialize: (state) => ({
           selectedSessionId: state.selectedSessionId,
-          sessions: state.sessions,
+          sessions: normalizeSessions(state.sessions),
         }),
       },
     ),
@@ -104,11 +126,10 @@ export default useSessionStore;
 
 function normalizeSessions(sessions: Session[]) {
   return sessions.map((session) =>
-    session.status === "connected" && !session.connectionId
-      ? {
-          ...session,
-          status: "disconnected" as const,
-        }
-      : session,
+    ({
+      ...session,
+      connectionId: undefined,
+      status: "disconnected" as const,
+    }),
   );
 }

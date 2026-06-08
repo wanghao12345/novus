@@ -1,6 +1,7 @@
-import { useMemo } from "react";
-import { Box, Flex, Text } from "@radix-ui/themes";
+import { useEffect, useMemo } from "react";
+import { Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import "./App.css";
 import { FileManager } from "./components/file-manager/FileManager";
 import { SessionBox } from "./components/session/SessionBox";
@@ -20,6 +21,40 @@ function App() {
     () => sessions.find((session) => session.id === selectedSessionId),
     [selectedSessionId, sessions],
   );
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    const connectedSessions = useSessionStore.getState().sessions.filter((session) => session.status === "connected");
+
+    for (const session of connectedSessions) {
+      if (!session.connectionId) {
+        useSessionStore.getState().setConnectionState(session.id, "disconnected");
+        continue;
+      }
+
+      void invoke("check_connection", { connectionId: session.connectionId }).catch(() => {
+        useSessionStore.getState().setConnectionState(session.id, "disconnected");
+      });
+    }
+
+    const unlistenPromise = listen<string>("connection_dead", (event) => {
+      useSessionStore.getState().markConnectionDead(event.payload);
+    });
+
+    const handleBeforeUnload = () => {
+      useSessionStore.getState().disconnectAllSessions();
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      void unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
 
   const handleCreateSession = (session: SessionFormData) => {
     createSession(session);
@@ -89,8 +124,10 @@ function App() {
         </Box>
 
         <Box className="min-w-0 flex-1">
-          {selectedSession ? (
+          {selectedSession && selectedSession.status === "connected" ? (
             <FileManager session={selectedSession} />
+          ) : selectedSession ? (
+            <DisconnectedPanel sessionName={selectedSession.sessionName} onConnect={() => void handleToggleConnection(selectedSession.id)} />
           ) : (
             <Flex className="h-full" align="center" justify="center">
               <Text color="gray" size="3">
@@ -108,4 +145,20 @@ export default App;
 
 function isTauriRuntime() {
   return "__TAURI_INTERNALS__" in window;
+}
+
+function DisconnectedPanel({ onConnect, sessionName }: { onConnect: () => void; sessionName: string }) {
+  return (
+    <Flex className="h-full px-6 text-center" align="center" direction="column" justify="center">
+      <Heading size="4" mb="2">
+        {sessionName} is disconnected
+      </Heading>
+      <Text color="gray" size="2" mb="4">
+        Connect this server from the session list before browsing remote files.
+      </Text>
+      <Button onClick={onConnect} size="2" variant="surface">
+        Connect
+      </Button>
+    </Flex>
+  );
 }
