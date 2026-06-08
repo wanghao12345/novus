@@ -1,3 +1,5 @@
+use std::{fs::File, path::Path};
+
 use tauri::Window;
 
 use crate::sftp::connection_pool::CONNECTION_POOL;
@@ -16,14 +18,24 @@ pub async fn upload_file(
     };
 
     let conn = conn.clone();
-    let local_path = local_path.clone();
-    let remote_path = remote_path.clone();
+    let local_path_clone = local_path.clone();
+    let remote_path_clone = remote_path.clone();
 
     let result = tokio::task::spawn_blocking(move || {
+        // Open the local file.
+        let mut local_file = File::open(&local_path_clone).map_err(|e| format!("Error opening file: {}", e))?;
+        // Create the remote file.
+        let mut remote_file = conn.sftp.create(Path::new(&remote_path_clone)).map_err(|e| format!("Error creating remote file: {}", e))?;
+        // Copy the file.
+        std::io::copy(&mut local_file, &mut remote_file).map_err(|e| format!("Error copying file: {}", e))?;
 
+        Ok(())
     }).await;
 
-    Ok(())
+    match result {
+        Ok(res) => res,
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 // Download a file.

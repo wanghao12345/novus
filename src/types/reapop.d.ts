@@ -27,7 +27,7 @@ declare module "reapop" {
       messageOrNotification: string | Partial<Notification>,
       statusOrOptions?: NotificationStatus | NotifyOptions,
       options?: NotifyOptions,
-    ) => { payload: Notification };
+    ) => { payload: Notification } | undefined;
   };
 
   export function NotificationsProvider(props: { children: ReactNode }): JSX.Element;

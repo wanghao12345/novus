@@ -39,13 +39,21 @@ function App() {
 
       void invoke("check_connection", { connectionId: session.connectionId }).catch(() => {
         useSessionStore.getState().setConnectionState(session.id, "disconnected");
-        notify(`${session.sessionName} connection is no longer active.`, "warning");
+        notify({
+          id: `connection-check-${session.id}`,
+          message: `${session.sessionName} connection is no longer active.`,
+          status: "warning",
+        });
       });
     }
 
     const unlistenPromise = listen<string>("connection_dead", (event) => {
       useSessionStore.getState().markConnectionDead(event.payload);
-      notify("A server connection was lost.", "warning");
+      notify({
+        id: `connection-dead-${event.payload}`,
+        message: "A server connection was lost.",
+        status: "warning",
+      });
     });
 
     const handleBeforeUnload = () => {
@@ -74,7 +82,6 @@ function App() {
 
   const handleToggleConnection = async (sessionId: string) => {
     const session = sessions.find((currentSession) => currentSession.id === sessionId);
-    let loadingNotification: ReturnType<typeof notify>["payload"] | undefined;
 
     if (!session) {
       return;
@@ -87,18 +94,31 @@ function App() {
         }
 
         setConnectionState(sessionId, "disconnected");
-        notify(`${session.sessionName} disconnected.`, "success");
+        notify({
+          id: `disconnect-${session.id}`,
+          message: `${session.sessionName} disconnected.`,
+          status: "success",
+        });
         return;
       }
 
       if (!session.password) {
-        notify("Please edit this session and enter a password before connecting.", "warning");
+        notify({
+          id: `missing-password-${session.id}`,
+          message: "Please edit this session and enter a password before connecting.",
+          status: "warning",
+        });
         return;
       }
 
-      loadingNotification = notify(`Connecting to ${session.sessionName}...`, "loading", {
+      const notificationId = `connect-${session.id}`;
+      notify({
+        dismissAfter: 2500,
         dismissible: false,
-      }).payload;
+        id: notificationId,
+        message: `Connecting to ${session.sessionName}...`,
+        status: "loading",
+      });
       const connectionId = isTauriRuntime()
         ? await invoke<string>("connect_sftp", {
             config: {
@@ -112,25 +132,20 @@ function App() {
         : `preview-${session.id}`;
       setConnectionState(sessionId, "connected", connectionId);
       notify({
-        ...loadingNotification,
         dismissAfter: 4500,
         dismissible: true,
+        id: notificationId,
         message: `${session.sessionName} connected successfully.`,
         status: "success",
       });
     } catch (error) {
-      if (loadingNotification) {
-        notify({
-          ...loadingNotification,
-          dismissAfter: 6000,
-          dismissible: true,
-          message: `Connection failed: ${String(error)}`,
-          status: "error",
-        });
-        return;
-      }
-
-      notify(`Connection failed: ${String(error)}`, "error");
+      notify({
+        dismissAfter: 8000,
+        dismissible: true,
+        id: `connect-${session.id}`,
+        message: formatCommandError(error, "Connection failed"),
+        status: "error",
+      });
     }
   };
 
@@ -171,6 +186,22 @@ export default App;
 
 function isTauriRuntime() {
   return "__TAURI_INTERNALS__" in window;
+}
+
+function formatCommandError(error: unknown, fallback: string) {
+  if (typeof error === "string" && error.trim()) {
+    return `${fallback}: ${error}`;
+  }
+
+  if (error instanceof Error && error.message) {
+    return `${fallback}: ${error.message}`;
+  }
+
+  try {
+    return `${fallback}: ${JSON.stringify(error)}`;
+  } catch {
+    return fallback;
+  }
 }
 
 function DisconnectedPanel({ onConnect, sessionName }: { onConnect: () => void; sessionName: string }) {

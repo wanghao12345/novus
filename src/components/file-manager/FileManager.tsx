@@ -44,9 +44,13 @@ export function FileManager({ session }: FileManagerProps) {
 
       setIsLoading(true);
       setStatusMessage("Loading directory...");
-      const loadingNotification = notify(`Loading ${path}...`, "loading", {
+      const notificationId = `directory-${session.id}`;
+      notify({
         dismissible: false,
-      }).payload;
+        id: notificationId,
+        message: `Loading ${path}...`,
+        status: "loading",
+      });
 
       try {
         const nextEntries = await listDirectory({
@@ -57,9 +61,9 @@ export function FileManager({ session }: FileManagerProps) {
         setEntries(nextEntries);
         setStatusMessage(nextEntries.length > 0 ? "Directory loaded" : "Directory is empty");
         notify({
-          ...loadingNotification,
           dismissAfter: 2500,
           dismissible: true,
+          id: notificationId,
           message: nextEntries.length > 0 ? "Directory loaded." : "Directory is empty.",
           status: "success",
         });
@@ -68,9 +72,9 @@ export function FileManager({ session }: FileManagerProps) {
         setEntries([]);
         setStatusMessage(message);
         notify({
-          ...loadingNotification,
           dismissAfter: 7000,
           dismissible: true,
+          id: notificationId,
           message,
           status: "error",
         });
@@ -78,7 +82,7 @@ export function FileManager({ session }: FileManagerProps) {
         setIsLoading(false);
       }
     },
-    [isConnected, notify, session.connectionId],
+    [isConnected, notify, session.connectionId, session.id],
   );
 
   useEffect(() => {
@@ -108,9 +112,13 @@ export function FileManager({ session }: FileManagerProps) {
     const currentPath = pathHistory[historyIndex] ?? rootPath;
     const folderPath = joinRemotePath(currentPath, folderName);
 
-    const loadingNotification = notify(`Creating ${folderName}...`, "loading", {
+    const notificationId = `create-folder-${session.id}-${folderPath}`;
+    notify({
       dismissible: false,
-    }).payload;
+      id: notificationId,
+      message: `Creating ${folderName}...`,
+      status: "loading",
+    });
 
     try {
       if (isTauriRuntime() && session.connectionId) {
@@ -128,9 +136,9 @@ export function FileManager({ session }: FileManagerProps) {
 
       setStatusMessage(`Created ${folderName}`);
       notify({
-        ...loadingNotification,
         dismissAfter: 3500,
         dismissible: true,
+        id: notificationId,
         message: `Created ${folderName}.`,
         status: "success",
       });
@@ -138,9 +146,9 @@ export function FileManager({ session }: FileManagerProps) {
       const message = `Failed to create folder: ${String(error)}`;
       setStatusMessage(message);
       notify({
-        ...loadingNotification,
         dismissAfter: 7000,
         dismissible: true,
+        id: notificationId,
         message,
         status: "error",
       });
@@ -149,9 +157,13 @@ export function FileManager({ session }: FileManagerProps) {
   };
 
   const handleDeleteEntry = async (entry: FileEntry) => {
-    const loadingNotification = notify(`Deleting ${entry.name}...`, "loading", {
+    const notificationId = `delete-entry-${session.id}-${entry.path}`;
+    notify({
       dismissible: false,
-    }).payload;
+      id: notificationId,
+      message: `Deleting ${entry.name}...`,
+      status: "loading",
+    });
 
     try {
       if (entry.type === "folder" && isTauriRuntime() && session.connectionId) {
@@ -162,9 +174,9 @@ export function FileManager({ session }: FileManagerProps) {
         await loadDirectory(pathHistory[historyIndex] ?? rootPath);
         setStatusMessage(`Deleted ${entry.name}`);
         notify({
-          ...loadingNotification,
           dismissAfter: 3500,
           dismissible: true,
+          id: notificationId,
           message: `Deleted ${entry.name}.`,
           status: "success",
         });
@@ -175,9 +187,9 @@ export function FileManager({ session }: FileManagerProps) {
         setEntries((currentEntries) => currentEntries.filter((currentEntry) => currentEntry.id !== entry.id));
         setStatusMessage(`Deleted ${entry.name}`);
         notify({
-          ...loadingNotification,
           dismissAfter: 3500,
           dismissible: true,
+          id: notificationId,
           message: `Deleted ${entry.name}.`,
           status: "success",
         });
@@ -186,9 +198,9 @@ export function FileManager({ session }: FileManagerProps) {
 
       setStatusMessage("File delete will be enabled after delete_item is registered");
       notify({
-        ...loadingNotification,
         dismissAfter: 5000,
         dismissible: true,
+        id: notificationId,
         message: "File delete will be enabled after delete_item is registered.",
         status: "warning",
       });
@@ -196,9 +208,9 @@ export function FileManager({ session }: FileManagerProps) {
       const message = `Failed to delete ${entry.name}: ${String(error)}`;
       setStatusMessage(message);
       notify({
-        ...loadingNotification,
         dismissAfter: 7000,
         dismissible: true,
+        id: notificationId,
         message,
         status: "error",
       });
@@ -207,12 +219,20 @@ export function FileManager({ session }: FileManagerProps) {
 
   const handleDownloadEntry = (entry: FileEntry) => {
     setStatusMessage(`Download requested for ${entry.name}`);
-    notify(`Download requested for ${entry.name}.`, "info");
+    notify({
+      id: `download-entry-${session.id}-${entry.path}`,
+      message: `Download requested for ${entry.name}.`,
+      status: "info",
+    });
   };
 
   const handleRenameEntry = (entry: FileEntry) => {
     setStatusMessage(`Rename requested for ${entry.name}`);
-    notify(`Rename requested for ${entry.name}.`, "info");
+    notify({
+      id: `rename-entry-${session.id}-${entry.path}`,
+      message: `Rename requested for ${entry.name}.`,
+      status: "info",
+    });
   };
 
   return (
@@ -229,7 +249,11 @@ export function FileManager({ session }: FileManagerProps) {
         onDownload={() => {
           const message = selectedFile ? `Queued download for ${selectedFile.name}` : "Select a file first";
           setStatusMessage(message);
-          notify(message, selectedFile ? "info" : "warning");
+          notify({
+            id: selectedFile ? `download-selection-${session.id}-${selectedFile.path}` : `download-selection-${session.id}`,
+            message,
+            status: selectedFile ? "info" : "warning",
+          });
         }}
         onGoBack={() => {
           const nextIndex = Math.max(0, historyIndex - 1);
@@ -250,7 +274,11 @@ export function FileManager({ session }: FileManagerProps) {
         }}
         onUpload={() => {
           setStatusMessage("Upload action is ready to connect to the backend");
-          notify("Upload action is ready to connect to the backend.", "info");
+          notify({
+            id: `upload-${session.id}`,
+            message: "Upload action is ready to connect to the backend.",
+            status: "info",
+          });
         }}
         path={activePath}
         selectedCount={selectedFile ? 1 : 0}
