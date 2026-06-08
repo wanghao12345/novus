@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { useNotifications } from "reapop";
 import "./App.css";
 import { FileManager } from "./components/file-manager/FileManager";
 import { SessionBox } from "./components/session/SessionBox";
@@ -9,6 +10,7 @@ import useSessionStore from "./store/session.store";
 import type { SessionFormData } from "./types/session";
 
 function App() {
+  const { notify } = useNotifications();
   const sessions = useSessionStore((state) => state.sessions);
   const selectedSessionId = useSessionStore((state) => state.selectedSessionId);
   const createSession = useSessionStore((state) => state.createSession);
@@ -37,11 +39,13 @@ function App() {
 
       void invoke("check_connection", { connectionId: session.connectionId }).catch(() => {
         useSessionStore.getState().setConnectionState(session.id, "disconnected");
+        notify(`${session.sessionName} connection is no longer active.`, "warning");
       });
     }
 
     const unlistenPromise = listen<string>("connection_dead", (event) => {
       useSessionStore.getState().markConnectionDead(event.payload);
+      notify("A server connection was lost.", "warning");
     });
 
     const handleBeforeUnload = () => {
@@ -54,7 +58,7 @@ function App() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       void unlistenPromise.then((unlisten) => unlisten());
     };
-  }, []);
+  }, [notify]);
 
   const handleCreateSession = (session: SessionFormData) => {
     createSession(session);
@@ -70,6 +74,7 @@ function App() {
 
   const handleToggleConnection = async (sessionId: string) => {
     const session = sessions.find((currentSession) => currentSession.id === sessionId);
+    let loadingNotification: ReturnType<typeof notify>["payload"] | undefined;
 
     if (!session) {
       return;
@@ -82,14 +87,18 @@ function App() {
         }
 
         setConnectionState(sessionId, "disconnected");
+        notify(`${session.sessionName} disconnected.`, "success");
         return;
       }
 
       if (!session.password) {
-        window.alert("Please edit this session and enter a password before connecting.");
+        notify("Please edit this session and enter a password before connecting.", "warning");
         return;
       }
 
+      loadingNotification = notify(`Connecting to ${session.sessionName}...`, "loading", {
+        dismissible: false,
+      }).payload;
       const connectionId = isTauriRuntime()
         ? await invoke<string>("connect_sftp", {
             config: {
@@ -99,12 +108,29 @@ function App() {
               session_name: session.sessionName,
               username: session.username,
             },
-          })
+        })
         : `preview-${session.id}`;
-      console.log(`Connected to ${session.host} as ${session.username}, connectionId: ${connectionId}`);
       setConnectionState(sessionId, "connected", connectionId);
+      notify({
+        ...loadingNotification,
+        dismissAfter: 4500,
+        dismissible: true,
+        message: `${session.sessionName} connected successfully.`,
+        status: "success",
+      });
     } catch (error) {
-      window.alert(`Connection failed: ${String(error)}`);
+      if (loadingNotification) {
+        notify({
+          ...loadingNotification,
+          dismissAfter: 6000,
+          dismissible: true,
+          message: `Connection failed: ${String(error)}`,
+          status: "error",
+        });
+        return;
+      }
+
+      notify(`Connection failed: ${String(error)}`, "error");
     }
   };
 

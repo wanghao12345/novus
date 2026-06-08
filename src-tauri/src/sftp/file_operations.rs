@@ -15,6 +15,14 @@ pub async fn upload_file(
         None => return Err("Connection not found".to_string()),
     };
 
+    let conn = conn.clone();
+    let local_path = local_path.clone();
+    let remote_path = remote_path.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
+
+    }).await;
+
     Ok(())
 }
 

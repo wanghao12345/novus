@@ -16,3 +16,24 @@
   --accent-a7: var(--novus-accent-border);
   --accent-a9: var(--novus-accent);
 }
+
+.reapop__container {
+  z-index: 9999;
+}
+
+.reapop__notification {
+  background: var(--gray-2);
+  border: 1px solid var(--gray-a6);
+  border-radius: 8px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  color: var(--gray-12);
+}
+
+.reapop__notification-title {
+  color: var(--gray-12);
+  font-weight: 700;
+}
+
+.reapop__notification-message {
+  color: var(--gray-11);
+}

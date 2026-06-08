@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Flex, ScrollArea } from "@radix-ui/themes";
+import { useNotifications } from "reapop";
 import { fileEntries } from "../../data/files";
 import { createDirectory, deleteDirectory, listDirectory } from "../../services/sftpDirectory";
 import type { Session } from "../../types/session";
@@ -13,6 +14,7 @@ interface FileManagerProps {
 }
 
 export function FileManager({ session }: FileManagerProps) {
+  const { notify } = useNotifications();
   const isConnected = session.status === "connected";
   const rootPath = "/";
   const [density, setDensity] = useState<FileDensity>("comfortable");
@@ -42,6 +44,9 @@ export function FileManager({ session }: FileManagerProps) {
 
       setIsLoading(true);
       setStatusMessage("Loading directory...");
+      const loadingNotification = notify(`Loading ${path}...`, "loading", {
+        dismissible: false,
+      }).payload;
 
       try {
         const nextEntries = await listDirectory({
@@ -51,14 +56,29 @@ export function FileManager({ session }: FileManagerProps) {
 
         setEntries(nextEntries);
         setStatusMessage(nextEntries.length > 0 ? "Directory loaded" : "Directory is empty");
+        notify({
+          ...loadingNotification,
+          dismissAfter: 2500,
+          dismissible: true,
+          message: nextEntries.length > 0 ? "Directory loaded." : "Directory is empty.",
+          status: "success",
+        });
       } catch (error) {
+        const message = `Failed to load directory: ${String(error)}`;
         setEntries([]);
-        setStatusMessage(`Failed to load directory: ${String(error)}`);
+        setStatusMessage(message);
+        notify({
+          ...loadingNotification,
+          dismissAfter: 7000,
+          dismissible: true,
+          message,
+          status: "error",
+        });
       } finally {
         setIsLoading(false);
       }
     },
-    [isConnected, session.connectionId],
+    [isConnected, notify, session.connectionId],
   );
 
   useEffect(() => {
@@ -88,48 +108,111 @@ export function FileManager({ session }: FileManagerProps) {
     const currentPath = pathHistory[historyIndex] ?? rootPath;
     const folderPath = joinRemotePath(currentPath, folderName);
 
-    if (isTauriRuntime() && session.connectionId) {
-      await createDirectory({
-        connectionId: session.connectionId,
-        path: folderPath,
-      });
-      await loadDirectory(currentPath);
-    } else {
-      setEntries((currentEntries) => [
-        { id: `folder-${Date.now()}`, name: folderName, path: folderPath, type: "folder", modifiedAt: "Just now" },
-        ...currentEntries,
-      ]);
-    }
+    const loadingNotification = notify(`Creating ${folderName}...`, "loading", {
+      dismissible: false,
+    }).payload;
 
-    setStatusMessage(`Created ${folderName}`);
+    try {
+      if (isTauriRuntime() && session.connectionId) {
+        await createDirectory({
+          connectionId: session.connectionId,
+          path: folderPath,
+        });
+        await loadDirectory(currentPath);
+      } else {
+        setEntries((currentEntries) => [
+          { id: `folder-${Date.now()}`, name: folderName, path: folderPath, type: "folder", modifiedAt: "Just now" },
+          ...currentEntries,
+        ]);
+      }
+
+      setStatusMessage(`Created ${folderName}`);
+      notify({
+        ...loadingNotification,
+        dismissAfter: 3500,
+        dismissible: true,
+        message: `Created ${folderName}.`,
+        status: "success",
+      });
+    } catch (error) {
+      const message = `Failed to create folder: ${String(error)}`;
+      setStatusMessage(message);
+      notify({
+        ...loadingNotification,
+        dismissAfter: 7000,
+        dismissible: true,
+        message,
+        status: "error",
+      });
+      throw error;
+    }
   };
 
   const handleDeleteEntry = async (entry: FileEntry) => {
-    if (entry.type === "folder" && isTauriRuntime() && session.connectionId) {
-      await deleteDirectory({
-        connectionId: session.connectionId,
-        path: entry.path,
+    const loadingNotification = notify(`Deleting ${entry.name}...`, "loading", {
+      dismissible: false,
+    }).payload;
+
+    try {
+      if (entry.type === "folder" && isTauriRuntime() && session.connectionId) {
+        await deleteDirectory({
+          connectionId: session.connectionId,
+          path: entry.path,
+        });
+        await loadDirectory(pathHistory[historyIndex] ?? rootPath);
+        setStatusMessage(`Deleted ${entry.name}`);
+        notify({
+          ...loadingNotification,
+          dismissAfter: 3500,
+          dismissible: true,
+          message: `Deleted ${entry.name}.`,
+          status: "success",
+        });
+        return;
+      }
+
+      if (entry.type === "folder") {
+        setEntries((currentEntries) => currentEntries.filter((currentEntry) => currentEntry.id !== entry.id));
+        setStatusMessage(`Deleted ${entry.name}`);
+        notify({
+          ...loadingNotification,
+          dismissAfter: 3500,
+          dismissible: true,
+          message: `Deleted ${entry.name}.`,
+          status: "success",
+        });
+        return;
+      }
+
+      setStatusMessage("File delete will be enabled after delete_item is registered");
+      notify({
+        ...loadingNotification,
+        dismissAfter: 5000,
+        dismissible: true,
+        message: "File delete will be enabled after delete_item is registered.",
+        status: "warning",
       });
-      await loadDirectory(pathHistory[historyIndex] ?? rootPath);
-      setStatusMessage(`Deleted ${entry.name}`);
-      return;
+    } catch (error) {
+      const message = `Failed to delete ${entry.name}: ${String(error)}`;
+      setStatusMessage(message);
+      notify({
+        ...loadingNotification,
+        dismissAfter: 7000,
+        dismissible: true,
+        message,
+        status: "error",
+      });
     }
-
-    if (entry.type === "folder") {
-      setEntries((currentEntries) => currentEntries.filter((currentEntry) => currentEntry.id !== entry.id));
-      setStatusMessage(`Deleted ${entry.name}`);
-      return;
-    }
-
-    setStatusMessage("File delete will be enabled after delete_item is registered");
   };
 
   const handleDownloadEntry = (entry: FileEntry) => {
     setStatusMessage(`Download requested for ${entry.name}`);
+    notify(`Download requested for ${entry.name}.`, "info");
   };
 
   const handleRenameEntry = (entry: FileEntry) => {
     setStatusMessage(`Rename requested for ${entry.name}`);
+    notify(`Rename requested for ${entry.name}.`, "info");
   };
 
   return (
@@ -143,7 +226,11 @@ export function FileManager({ session }: FileManagerProps) {
           setStatusMessage("Selection cleared");
         }}
         onCreateFolder={handleCreateFolder}
-        onDownload={() => setStatusMessage(selectedFile ? `Queued download for ${selectedFile.name}` : "Select a file first")}
+        onDownload={() => {
+          const message = selectedFile ? `Queued download for ${selectedFile.name}` : "Select a file first";
+          setStatusMessage(message);
+          notify(message, selectedFile ? "info" : "warning");
+        }}
         onGoBack={() => {
           const nextIndex = Math.max(0, historyIndex - 1);
           setHistoryIndex(nextIndex);
@@ -161,7 +248,10 @@ export function FileManager({ session }: FileManagerProps) {
         onRefresh={() => {
           void loadDirectory(activePath);
         }}
-        onUpload={() => setStatusMessage("Upload action is ready to connect to the backend")}
+        onUpload={() => {
+          setStatusMessage("Upload action is ready to connect to the backend");
+          notify("Upload action is ready to connect to the backend.", "info");
+        }}
         path={activePath}
         selectedCount={selectedFile ? 1 : 0}
       />
