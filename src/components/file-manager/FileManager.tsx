@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { Flex, ScrollArea } from "@radix-ui/themes";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useNotifications } from "reapop";
 import { fileEntries } from "../../data/files";
 import { createDirectory, deleteDirectory, listDirectory } from "../../services/sftpDirectory";
+import { uploadFile } from "../../services/sftpTransfer";
 import type { Session } from "../../types/session";
-import type { FileDensity, FileEntry } from "../../types/file-manager";
+import type { FileDensity, FileEntry, UploadTask } from "../../types/file-manager";
 import { FileStatusBar } from "./parts/FileStatusBar";
 import { FileTable } from "./parts/FileTable";
 import { FileToolbar } from "./parts/FileToolbar";
+import { UploadProgressPanel } from "./parts/UploadProgressPanel";
 
 interface FileManagerProps {
   session: Session;
@@ -24,6 +27,7 @@ export function FileManager({ session }: FileManagerProps) {
   const [selectedFileId, setSelectedFileId] = useState<string>();
   const [statusMessage, setStatusMessage] = useState("Ready");
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadTasks, setUploadTasks] = useState<UploadTask[]>([]);
 
   const activePath = isConnected ? pathHistory[historyIndex] ?? rootPath : "Connect session to browse files";
   const selectedFile = entries.find((entry) => entry.id === selectedFileId);
@@ -235,6 +239,135 @@ export function FileManager({ session }: FileManagerProps) {
     });
   };
 
+  const handleUploadClick = async () => {
+    if (!isTauriRuntime()) {
+      notify({
+        id: `upload-dialog-${session.id}`,
+        message: "File upload requires the Tauri desktop app.",
+        status: "warning",
+      });
+      return;
+    }
+
+    let selectedPaths: string | string[] | null;
+
+    try {
+      selectedPaths = await open({
+        directory: false,
+        multiple: true,
+      });
+    } catch (error) {
+      notify({
+        dismissAfter: 6000,
+        dismissible: true,
+        id: `upload-dialog-${session.id}`,
+        message: `Unable to open file picker: ${String(error)}`,
+        status: "error",
+      });
+      return;
+    }
+
+    if (!selectedPaths) {
+      return;
+    }
+
+    const localPaths = Array.isArray(selectedPaths) ? selectedPaths : [selectedPaths];
+
+    for (const localPath of localPaths) {
+      void uploadSelectedFile(localPath);
+    }
+  };
+
+  const uploadSelectedFile = async (localPath: string) => {
+    const fileName = getFileNameFromPath(localPath);
+    const currentPath = pathHistory[historyIndex] ?? rootPath;
+    const remotePath = joinRemoteFilePath(currentPath, fileName);
+    const taskId = `upload-${Date.now()}-${fileName}`;
+
+    setUploadTasks((currentTasks) => [
+      {
+        fileName,
+        id: taskId,
+        progress: 8,
+        remotePath,
+        status: "uploading",
+      },
+      ...currentTasks,
+    ]);
+    setStatusMessage(`Uploading ${fileName}`);
+    notify({
+      id: taskId,
+      message: `Uploading ${fileName}...`,
+      status: "loading",
+    });
+
+    const timer = window.setInterval(() => {
+      setUploadTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === taskId && task.status === "uploading"
+            ? {
+                ...task,
+                progress: Math.min(task.progress + 12, 88),
+              }
+            : task,
+        ),
+      );
+    }, 500);
+
+    try {
+      if (isTauriRuntime() && session.connectionId) {
+        await uploadFile({
+          connectionId: session.connectionId,
+          localPath,
+          remotePath,
+        });
+        await loadDirectory(currentPath);
+      }
+
+      window.clearInterval(timer);
+      setUploadTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === taskId
+            ? {
+                ...task,
+                progress: 100,
+                status: "success",
+              }
+            : task,
+        ),
+      );
+      setStatusMessage(`Uploaded ${fileName}`);
+      notify({
+        dismissAfter: 4000,
+        dismissible: true,
+        id: taskId,
+        message: `Uploaded ${fileName}.`,
+        status: "success",
+      });
+    } catch (error) {
+      window.clearInterval(timer);
+      const message = `Failed to upload ${fileName}: ${String(error)}`;
+      setStatusMessage(message);
+      setUploadTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === taskId
+            ? {
+                ...task,
+                status: "error",
+              }
+            : task,
+        ),
+      );
+      notify({
+        dismissAfter: 7000,
+        dismissible: true,
+        id: taskId,
+        message,
+        status: "error",
+      });
+    }
+  };
+
   return (
     <Flex className="h-full min-w-0 bg-[var(--gray-1)]" direction="column">
       <FileToolbar
@@ -272,14 +405,7 @@ export function FileManager({ session }: FileManagerProps) {
         onRefresh={() => {
           void loadDirectory(activePath);
         }}
-        onUpload={() => {
-          setStatusMessage("Upload action is ready to connect to the backend");
-          notify({
-            id: `upload-${session.id}`,
-            message: "Upload action is ready to connect to the backend.",
-            status: "info",
-          });
-        }}
+        onUpload={handleUploadClick}
         path={activePath}
         selectedCount={selectedFile ? 1 : 0}
       />
@@ -312,6 +438,13 @@ export function FileManager({ session }: FileManagerProps) {
         sessionName={session.sessionName}
         statusMessage={statusMessage}
       />
+
+      <UploadProgressPanel
+        onDismissTask={(taskId) => {
+          setUploadTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
+        }}
+        tasks={uploadTasks}
+      />
     </Flex>
   );
 }
@@ -325,6 +458,15 @@ function joinRemotePath(basePath: string, name: string) {
   return `${normalizedBase}${name}/`;
 }
 
+function joinRemoteFilePath(basePath: string, fileName: string) {
+  const normalizedBase = basePath.endsWith("/") ? basePath : `${basePath}/`;
+  return `${normalizedBase}${fileName}`;
+}
+
 function ensureDirectoryPath(path: string) {
   return path.endsWith("/") ? path : `${path}/`;
+}
+
+function getFileNameFromPath(path: string) {
+  return path.split(/[\\/]/).pop() ?? path;
 }

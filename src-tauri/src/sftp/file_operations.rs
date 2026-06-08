@@ -12,11 +12,14 @@ pub async fn upload_file(
     remote_path: String,
     window: Window,
 ) -> Result<(), String> {
+    dbg!(&connection_id, &local_path, &remote_path);
+    
     let conn = match CONNECTION_POOL.get(&connection_id) {
         Some(session) => session,
         None => return Err("Connection not found".to_string()),
     };
 
+    const BUFFER_SIZE: usize = 8192; // 8KB buffer
     let conn = conn.clone();
     let local_path_clone = local_path.clone();
     let remote_path_clone = remote_path.clone();

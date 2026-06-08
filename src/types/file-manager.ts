@@ -10,3 +10,11 @@ export interface FileEntry {
 }
 
 export type FileDensity = "compact" | "comfortable";
+
+export interface UploadTask {
+  id: string;
+  fileName: string;
+  progress: number;
+  remotePath: string;
+  status: "uploading" | "success" | "error";
+}
