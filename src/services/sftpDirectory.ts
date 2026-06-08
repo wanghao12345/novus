@@ -43,10 +43,10 @@ export async function createDirectory({ connectionId, path }: ListDirectoryParam
   });
 }
 
-export async function deleteDirectory({ connectionId, path }: ListDirectoryParams): Promise<void> {
-  await invoke("delete_directory", {
+export async function deleteItem({ connectionId, path }: ListDirectoryParams): Promise<void> {
+  await invoke("delete_item", {
     connectionId,
-    path,
+    remotePath: path,
   });
 }
 

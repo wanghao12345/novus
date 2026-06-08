@@ -10,7 +10,6 @@ use crate::{
 
 #[tauri::command]
 pub async fn connect_sftp(config: ConnectionConfig) -> Result<String, String> {
-    dbg!(&config);
     // 1、Create TCP stream
     let tcp = TcpStream::connect(format!("{}:{}", config.host, config.port)).map_err(|e| {
         format!(

@@ -3,7 +3,7 @@ import { Flex, ScrollArea } from "@radix-ui/themes";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useNotifications } from "reapop";
 import { fileEntries } from "../../data/files";
-import { createDirectory, deleteDirectory, listDirectory } from "../../services/sftpDirectory";
+import { createDirectory, deleteItem, listDirectory } from "../../services/sftpDirectory";
 import { uploadFile } from "../../services/sftpTransfer";
 import type { Session } from "../../types/session";
 import type { FileDensity, FileEntry, UploadTask } from "../../types/file-manager";
@@ -170,8 +170,8 @@ export function FileManager({ session }: FileManagerProps) {
     });
 
     try {
-      if (entry.type === "folder" && isTauriRuntime() && session.connectionId) {
-        await deleteDirectory({
+      if (isTauriRuntime() && session.connectionId) {
+        await deleteItem({
           connectionId: session.connectionId,
           path: entry.path,
         });
@@ -187,7 +187,7 @@ export function FileManager({ session }: FileManagerProps) {
         return;
       }
 
-      if (entry.type === "folder") {
+      if (!isTauriRuntime()) {
         setEntries((currentEntries) => currentEntries.filter((currentEntry) => currentEntry.id !== entry.id));
         setStatusMessage(`Deleted ${entry.name}`);
         notify({
@@ -199,15 +199,6 @@ export function FileManager({ session }: FileManagerProps) {
         });
         return;
       }
-
-      setStatusMessage("File delete will be enabled after delete_item is registered");
-      notify({
-        dismissAfter: 5000,
-        dismissible: true,
-        id: notificationId,
-        message: "File delete will be enabled after delete_item is registered.",
-        status: "warning",
-      });
     } catch (error) {
       const message = `Failed to delete ${entry.name}: ${String(error)}`;
       setStatusMessage(message);

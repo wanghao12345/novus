@@ -23,11 +23,12 @@ pub fn run() {
             check_connection,
             list_directory,
             create_directory,
-            delete_directory,
+            delete_item,
             upload_file,
             download_file,
             copy_item,
             move_item,
+            rename_item,
             cancel_transfer,
             get_active_transfers,
         ])

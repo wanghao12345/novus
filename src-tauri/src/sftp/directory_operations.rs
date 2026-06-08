@@ -40,14 +40,3 @@ pub async fn create_directory(connection_id: String, path: String) -> Result<(),
     conn.sftp.mkdir(Path::new(&path), 0o755).map_err(|e| format!("Failed to create directory: {}", e))?;
     Ok(())
 }
-
-// Delete a directory.
-#[tauri::command]
-pub async fn delete_directory(connection_id: String, path: String) -> Result<(), String> {
-    let conn = match CONNECTION_POOL.get(&connection_id) {
-        Some(session) => session,
-        None => return Err("Connection not found".to_string()),
-    };
-    conn.sftp.rmdir(Path::new(&path)).map_err(|e| format!("Failed to delete directory: {}", e))?;
-    Ok(())
-}

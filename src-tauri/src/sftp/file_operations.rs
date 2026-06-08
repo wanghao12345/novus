@@ -11,9 +11,7 @@ pub async fn upload_file(
     local_path: String,
     remote_path: String,
     window: Window,
-) -> Result<(), String> {
-    dbg!(&connection_id, &local_path, &remote_path);
-    
+) -> Result<(), String> {    
     let conn = match CONNECTION_POOL.get(&connection_id) {
         Some(session) => session,
         None => return Err("Connection not found".to_string()),
@@ -56,10 +54,22 @@ pub async fn download_file(
 #[tauri::command]
 pub async fn delete_item(
     connection_id: String,
-    path: String,
-    id_directory: bool,
-    window: Window,
-) -> Result<(), String> {
+    remote_path: String
+) -> Result<(), String> {    
+    let conn = match CONNECTION_POOL.get(&connection_id) {
+        Some(session) => session,
+        None => return Err("Connection not found".to_string()),
+    };
+    let path = Path::new(&remote_path);
+
+    let metadata = conn.sftp.stat(path).map_err(|e| format!("Error getting metadata: {}", e))?;
+    let is_directory = metadata.is_dir();
+
+    if is_directory {
+        conn.sftp.rmdir(path).map_err(|e| format!("Error deleting directory: {}", e))?;
+    } else {
+        conn.sftp.unlink(path).map_err(|e| format!("Error deleting file: {}", e))?;
+    }
     Ok(())
 }
 
