@@ -76,3 +76,12 @@ pub async fn disconnect_sftp(connection_id: String) -> Result<(), String> {
     CONNECTION_POOL.remove(&connection_id);
     Ok(())
 }
+
+#[tauri::command]
+pub async fn check_connection(connection_id: String) -> Result<(), String> {
+    let _ = match CONNECTION_POOL.get(&connection_id) {
+        Some(session) => session,
+        None => return Err("Connection not found".to_string()),
+    };
+    Ok(())
+}

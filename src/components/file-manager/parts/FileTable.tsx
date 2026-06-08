@@ -1,4 +1,4 @@
-import { Box, Flex, Table, Text } from "@radix-ui/themes";
+import { Box, ContextMenu, Flex, Table, Text } from "@radix-ui/themes";
 import fileDefaultIcon from "../../../assets/icons/file-default.png";
 import filePdfIcon from "../../../assets/icons/file-pdf.png";
 import fileTxtIcon from "../../../assets/icons/file-txt.png";
@@ -12,6 +12,9 @@ interface FileTableProps {
   isDisabled: boolean;
   selectedFileId?: string;
   onOpenFolder: (entry: FileEntry) => void;
+  onDeleteEntry: (entry: FileEntry) => void;
+  onDownloadEntry: (entry: FileEntry) => void;
+  onRenameEntry: (entry: FileEntry) => void;
   onSelectFile: (entry: FileEntry) => void;
 }
 
@@ -20,7 +23,10 @@ export function FileTable({
   entries,
   isDisabled,
   selectedFileId,
+  onDeleteEntry,
+  onDownloadEntry,
   onOpenFolder,
+  onRenameEntry,
   onSelectFile,
 }: FileTableProps) {
   return (
@@ -40,7 +46,10 @@ export function FileTable({
             isDisabled={isDisabled}
             isSelected={entry.id === selectedFileId}
             key={entry.id}
+            onDeleteEntry={onDeleteEntry}
+            onDownloadEntry={onDownloadEntry}
             onOpenFolder={onOpenFolder}
+            onRenameEntry={onRenameEntry}
             onSelectFile={onSelectFile}
           />
         ))}
@@ -55,13 +64,19 @@ function FileRow({
   isDisabled,
   isSelected,
   onOpenFolder,
+  onDeleteEntry,
+  onDownloadEntry,
+  onRenameEntry,
   onSelectFile,
 }: {
   density: FileDensity;
   entry: FileEntry;
   isDisabled: boolean;
   isSelected: boolean;
+  onDeleteEntry: (entry: FileEntry) => void;
+  onDownloadEntry: (entry: FileEntry) => void;
   onOpenFolder: (entry: FileEntry) => void;
+  onRenameEntry: (entry: FileEntry) => void;
   onSelectFile: (entry: FileEntry) => void;
 }) {
   const isFolder = entry.type === "folder";
@@ -88,23 +103,39 @@ function FileRow({
       }}
     >
       <Table.Cell>
-        <Flex className="min-w-0" align="center" gap="3">
-          <Flex
-            className="h-10 w-10 shrink-0 rounded-md border border-[color:var(--gray-a5)] bg-[var(--gray-a3)]"
-            align="center"
-            justify="center"
-          >
-            <img alt="" className="h-7 w-7 object-contain" draggable={false} src={getFileIcon(entry)} />
-          </Flex>
-          <Box className="min-w-0">
-            <Text className="block truncate" size="3" weight="bold">
-              {entry.name}
-            </Text>
-            <Text className="block truncate" color="gray" size="2">
-              {isFolder ? "Folder" : entry.extension}
-            </Text>
-          </Box>
-        </Flex>
+        <ContextMenu.Root>
+          <ContextMenu.Trigger className="block">
+            <Flex className="min-w-0" align="center" gap="3">
+              <Flex
+                className="h-10 w-10 shrink-0 rounded-md border border-[color:var(--gray-a5)] bg-[var(--gray-a3)]"
+                align="center"
+                justify="center"
+              >
+                <img alt="" className="h-7 w-7 object-contain" draggable={false} src={getFileIcon(entry)} />
+              </Flex>
+              <Box className="min-w-0">
+                <Text className="block truncate" size="3" weight="bold">
+                  {entry.name}
+                </Text>
+                <Text className="block truncate" color="gray" size="2">
+                  {isFolder ? "Folder" : entry.extension}
+                </Text>
+              </Box>
+            </Flex>
+          </ContextMenu.Trigger>
+          <ContextMenu.Content>
+            <ContextMenu.Item disabled={isDisabled} onClick={() => onRenameEntry(entry)}>
+              Rename
+            </ContextMenu.Item>
+            <ContextMenu.Item disabled={isDisabled || isFolder} onClick={() => onDownloadEntry(entry)}>
+              Download
+            </ContextMenu.Item>
+            <ContextMenu.Separator />
+            <ContextMenu.Item color="red" disabled={isDisabled} onClick={() => onDeleteEntry(entry)}>
+              Delete
+            </ContextMenu.Item>
+          </ContextMenu.Content>
+        </ContextMenu.Root>
       </Table.Cell>
       <Table.Cell className="text-right">
         <Text color="gray" size="2">

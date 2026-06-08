@@ -7,6 +7,7 @@ import {
   ReloadIcon,
   UploadIcon,
 } from "@radix-ui/react-icons";
+import { CreateFolderDialog } from "./CreateFolderDialog";
 
 interface FileToolbarProps {
   canGoBack: boolean;
@@ -20,7 +21,7 @@ interface FileToolbarProps {
   onUpload: () => void;
   onDownload: () => void;
   onClearSelection: () => void;
-  onCreateFolder: () => void;
+  onCreateFolder: (folderName: string) => Promise<void> | void;
 }
 
 export function FileToolbar({
@@ -84,7 +85,9 @@ export function FileToolbar({
           </IconButton>
         </DropdownMenu.Trigger>
         <DropdownMenu.Content align="end">
-          <DropdownMenu.Item onClick={onCreateFolder}>New Folder</DropdownMenu.Item>
+          <CreateFolderDialog isDisabled={!canUseFiles} onCreateFolder={onCreateFolder}>
+            <DropdownMenu.Item onSelect={(event) => event.preventDefault()}>New Folder</DropdownMenu.Item>
+          </CreateFolderDialog>
           <DropdownMenu.Item disabled={selectedCount === 0} onClick={onDownload}>
             Download Selection
           </DropdownMenu.Item>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Flex, ScrollArea } from "@radix-ui/themes";
 import { fileEntries } from "../../data/files";
-import { listDirectory } from "../../services/sftpDirectory";
+import { createDirectory, deleteDirectory, listDirectory } from "../../services/sftpDirectory";
 import type { Session } from "../../types/session";
 import type { FileDensity, FileEntry } from "../../types/file-manager";
 import { FileStatusBar } from "./parts/FileStatusBar";
@@ -84,17 +84,52 @@ export function FileManager({ session }: FileManagerProps) {
     setStatusMessage(`Opened ${entry.name}`);
   };
 
-  const handleCreateFolder = () => {
-    const folderNumber = entries.filter((entry) => entry.type === "folder").length + 1;
-    const folderName = `new-folder-${folderNumber}`;
+  const handleCreateFolder = async (folderName: string) => {
     const currentPath = pathHistory[historyIndex] ?? rootPath;
     const folderPath = joinRemotePath(currentPath, folderName);
 
-    setEntries((currentEntries) => [
-      { id: `folder-${Date.now()}`, name: folderName, path: folderPath, type: "folder", modifiedAt: "Just now" },
-      ...currentEntries,
-    ]);
+    if (isTauriRuntime() && session.connectionId) {
+      await createDirectory({
+        connectionId: session.connectionId,
+        path: folderPath,
+      });
+      await loadDirectory(currentPath);
+    } else {
+      setEntries((currentEntries) => [
+        { id: `folder-${Date.now()}`, name: folderName, path: folderPath, type: "folder", modifiedAt: "Just now" },
+        ...currentEntries,
+      ]);
+    }
+
     setStatusMessage(`Created ${folderName}`);
+  };
+
+  const handleDeleteEntry = async (entry: FileEntry) => {
+    if (entry.type === "folder" && isTauriRuntime() && session.connectionId) {
+      await deleteDirectory({
+        connectionId: session.connectionId,
+        path: entry.path,
+      });
+      await loadDirectory(pathHistory[historyIndex] ?? rootPath);
+      setStatusMessage(`Deleted ${entry.name}`);
+      return;
+    }
+
+    if (entry.type === "folder") {
+      setEntries((currentEntries) => currentEntries.filter((currentEntry) => currentEntry.id !== entry.id));
+      setStatusMessage(`Deleted ${entry.name}`);
+      return;
+    }
+
+    setStatusMessage("File delete will be enabled after delete_item is registered");
+  };
+
+  const handleDownloadEntry = (entry: FileEntry) => {
+    setStatusMessage(`Download requested for ${entry.name}`);
+  };
+
+  const handleRenameEntry = (entry: FileEntry) => {
+    setStatusMessage(`Rename requested for ${entry.name}`);
   };
 
   return (
@@ -136,7 +171,12 @@ export function FileManager({ session }: FileManagerProps) {
           density={density}
           entries={entries}
           isDisabled={!isConnected || isLoading}
+          onDeleteEntry={(entry) => {
+            void handleDeleteEntry(entry);
+          }}
+          onDownloadEntry={handleDownloadEntry}
           onOpenFolder={handleOpenFolder}
+          onRenameEntry={handleRenameEntry}
           onSelectFile={(entry) => {
             setSelectedFileId(entry.id);
             setStatusMessage("Ready");

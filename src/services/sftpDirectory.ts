@@ -36,6 +36,20 @@ export async function listDirectory({ connectionId, path }: ListDirectoryParams)
     .sort(sortDirectoryEntries);
 }
 
+export async function createDirectory({ connectionId, path }: ListDirectoryParams): Promise<void> {
+  await invoke("create_directory", {
+    connectionId,
+    path,
+  });
+}
+
+export async function deleteDirectory({ connectionId, path }: ListDirectoryParams): Promise<void> {
+  await invoke("delete_directory", {
+    connectionId,
+    path,
+  });
+}
+
 function normalizeDirectoryEntry(entry: DirectoryEntryResponse, index: number): FileEntry {
   if (typeof entry === "string") {
     const normalizedName = entry.replace(/\/$/, "").split("/").filter(Boolean).pop() ?? entry;

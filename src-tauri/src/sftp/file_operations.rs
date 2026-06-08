@@ -1,5 +1,6 @@
 use tauri::Window;
 
+use crate::sftp::connection_pool::CONNECTION_POOL;
 
 // Upload a file.
 #[tauri::command]
@@ -7,8 +8,13 @@ pub async fn upload_file(
     connection_id: String,
     local_path: String,
     remote_path: String,
-    window: Window
+    window: Window,
 ) -> Result<(), String> {
+    let conn = match CONNECTION_POOL.get(&connection_id) {
+        Some(session) => session,
+        None => return Err("Connection not found".to_string()),
+    };
+
     Ok(())
 }
 
@@ -18,7 +24,7 @@ pub async fn download_file(
     connection_id: String,
     local_path: String,
     remote_path: String,
-    window: Window
+    window: Window,
 ) -> Result<(), String> {
     Ok(())
 }
@@ -29,7 +35,7 @@ pub async fn delete_item(
     connection_id: String,
     path: String,
     id_directory: bool,
-    window: Window
+    window: Window,
 ) -> Result<(), String> {
     Ok(())
 }
@@ -39,16 +45,14 @@ pub async fn delete_item(
 pub async fn rename_item(
     connection_id: String,
     old_path: String,
-    new_path: String
+    new_path: String,
 ) -> Result<(), String> {
     Ok(())
 }
 
 // Cancel a transfer.
 #[tauri::command]
-pub async fn cancel_transfer(
-    transfer_id: String
-) -> Result<(), String> {
+pub async fn cancel_transfer(transfer_id: String) -> Result<(), String> {
     Ok(())
 }
 
@@ -65,7 +69,7 @@ pub async fn copy_item(
     source_path: String,
     target_path: String,
     is_directory: bool,
-    window: Window
+    window: Window,
 ) -> Result<(), String> {
     Ok(())
 }

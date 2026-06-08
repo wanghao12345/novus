@@ -19,6 +19,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             connect_sftp,
             disconnect_sftp,
+            check_connection,
             list_directory,
             create_directory,
             delete_directory,
