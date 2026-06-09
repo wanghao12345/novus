@@ -1,5 +1,6 @@
 use std::{fs::File, path::Path};
 
+use ssh2::Sftp;
 use tauri::Window;
 
 use crate::sftp::connection_pool::CONNECTION_POOL;
@@ -66,12 +67,33 @@ pub async fn delete_item(
     let is_directory = metadata.is_dir();
 
     if is_directory {
-        conn.sftp.rmdir(path).map_err(|e| format!("Error deleting directory: {}", e))?;
+        delete_directory(&conn.sftp, path)?;
     } else {
         conn.sftp.unlink(path).map_err(|e| format!("Error deleting file: {}", e))?;
     }
     Ok(())
 }
+
+fn delete_directory(sftp: &Sftp, path: &Path) -> Result<(), String> {
+    
+    // 1. Read all the directory contents.
+    let entries = sftp.readdir(path).map_err(|e| format!("Error reading directory: {}", e))?;
+
+    // 2. Delete each file or directory.
+    for (entry_path, metadata) in entries {
+        let is_directory = metadata.is_dir();
+        if is_directory {
+            delete_directory(sftp, &entry_path)?;
+        } else {
+            sftp.unlink(&entry_path).map_err(|e| format!("Error deleting file: {}", e))?;
+        }
+    }
+    // 3. Delete the directory.
+    sftp.rmdir(path).map_err(|e| format!("Error deleting directory: {}", e))?;
+
+    Ok(())
+}
+
 
 // Rename a file or directory.
 #[tauri::command]
