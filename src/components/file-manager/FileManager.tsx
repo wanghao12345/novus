@@ -3,13 +3,14 @@ import { Flex, ScrollArea } from "@radix-ui/themes";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useNotifications } from "reapop";
 import { fileEntries } from "../../data/files";
-import { createDirectory, deleteItem, listDirectory } from "../../services/sftpDirectory";
+import { createDirectory, deleteItem, listDirectory, renameItem } from "../../services/sftpDirectory";
 import { uploadFile } from "../../services/sftpTransfer";
 import type { Session } from "../../types/session";
 import type { FileDensity, FileEntry, UploadTask } from "../../types/file-manager";
 import { FileStatusBar } from "./parts/FileStatusBar";
 import { FileTable } from "./parts/FileTable";
 import { FileToolbar } from "./parts/FileToolbar";
+import { RenameDialog } from "./parts/RenameDialog";
 import { UploadProgressPanel } from "./parts/UploadProgressPanel";
 
 interface FileManagerProps {
@@ -28,6 +29,8 @@ export function FileManager({ session }: FileManagerProps) {
   const [statusMessage, setStatusMessage] = useState("Ready");
   const [isLoading, setIsLoading] = useState(false);
   const [uploadTasks, setUploadTasks] = useState<UploadTask[]>([]);
+  const [renameEntry, setRenameEntry] = useState<FileEntry | null>(null);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
 
   const activePath = isConnected ? pathHistory[historyIndex] ?? rootPath : "Connect session to browse files";
   const selectedFile = entries.find((entry) => entry.id === selectedFileId);
@@ -222,12 +225,59 @@ export function FileManager({ session }: FileManagerProps) {
   };
 
   const handleRenameEntry = (entry: FileEntry) => {
-    setStatusMessage(`Rename requested for ${entry.name}`);
+    setRenameEntry(entry);
+    setIsRenameDialogOpen(true);
+  };
+
+  const handleRename = async (entry: FileEntry, newName: string) => {
+    const notificationId = `rename-entry-${session.id}-${entry.path}`;
     notify({
-      id: `rename-entry-${session.id}-${entry.path}`,
-      message: `Rename requested for ${entry.name}.`,
-      status: "info",
+      dismissible: false,
+      id: notificationId,
+      message: `Renaming ${entry.name} to ${newName}...`,
+      status: "loading",
     });
+
+    try {
+      if (isTauriRuntime() && session.connectionId) {
+        const currentPath = pathHistory[historyIndex] ?? rootPath;
+        const oldPath = entry.path || joinRemoteFilePath(currentPath, entry.name);
+        const newPath = joinRemoteFilePath(currentPath, newName);
+
+        await renameItem({
+          connectionId: session.connectionId,
+          oldPath,
+          newPath,
+        });
+        await loadDirectory(currentPath);
+      } else {
+        setEntries((currentEntries) =>
+          currentEntries.map((currentEntry) =>
+            currentEntry.id === entry.id ? { ...currentEntry, name: newName } : currentEntry
+          )
+        );
+      }
+
+      setStatusMessage(`Renamed ${entry.name} to ${newName}`);
+      notify({
+        dismissAfter: 3500,
+        dismissible: true,
+        id: notificationId,
+        message: `Renamed ${entry.name} to ${newName}.`,
+        status: "success",
+      });
+    } catch (error) {
+      const message = `Failed to rename ${entry.name}: ${String(error)}`;
+      setStatusMessage(message);
+      notify({
+        dismissAfter: 7000,
+        dismissible: true,
+        id: notificationId,
+        message,
+        status: "error",
+      });
+      throw error;
+    }
   };
 
   const handleUploadClick = async () => {
@@ -435,6 +485,13 @@ export function FileManager({ session }: FileManagerProps) {
           setUploadTasks((currentTasks) => currentTasks.filter((task) => task.id !== taskId));
         }}
         tasks={uploadTasks}
+      />
+
+      <RenameDialog
+        entry={renameEntry}
+        isOpen={isRenameDialogOpen}
+        onOpenChange={setIsRenameDialogOpen}
+        onRename={handleRename}
       />
     </Flex>
   );

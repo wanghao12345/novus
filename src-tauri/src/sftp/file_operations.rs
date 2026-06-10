@@ -102,6 +102,15 @@ pub async fn rename_item(
     old_path: String,
     new_path: String,
 ) -> Result<(), String> {
+    let conn = match CONNECTION_POOL.get(&connection_id) {
+        Some(session) => session,
+        None => return Err("Connection not found".to_string()),
+    };
+    conn.sftp.rename(
+        Path::new(&old_path), 
+        Path::new(&new_path), 
+        None
+    ).map_err(|e| format!("Error renaming file: {}", e))?;
     Ok(())
 }
 

@@ -50,6 +50,20 @@ export async function deleteItem({ connectionId, path }: ListDirectoryParams): P
   });
 }
 
+interface RenameItemParams {
+  connectionId: string;
+  oldPath: string;
+  newPath: string;
+}
+
+export async function renameItem({ connectionId, oldPath, newPath }: RenameItemParams): Promise<void> {
+  await invoke("rename_item", {
+    connectionId,
+    oldPath,
+    newPath,
+  });
+}
+
 function normalizeDirectoryEntry(entry: DirectoryEntryResponse, index: number): FileEntry {
   if (typeof entry === "string") {
     const normalizedName = entry.replace(/\/$/, "").split("/").filter(Boolean).pop() ?? entry;
