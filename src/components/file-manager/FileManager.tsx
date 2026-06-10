@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Flex, ScrollArea } from "@radix-ui/themes";
 import { open } from "@tauri-apps/plugin-dialog";
+import { emit, listen } from "@tauri-apps/api/event";
 import { useNotifications } from "reapop";
 import { fileEntries } from "../../data/files";
 import { copyItem, createDirectory, deleteItem, listDirectory, moveItem, renameItem } from "../../services/sftpDirectory";
@@ -412,12 +413,13 @@ export function FileManager({ session }: FileManagerProps) {
     const currentPath = pathHistory[historyIndex] ?? rootPath;
     const remotePath = joinRemoteFilePath(currentPath, fileName);
     const taskId = `upload-${Date.now()}-${fileName}`;
+    const transferId = taskId;
 
     setUploadTasks((currentTasks) => [
       {
         fileName,
         id: taskId,
-        progress: 8,
+        progress: 0,
         remotePath,
         status: "uploading",
       },
@@ -430,18 +432,28 @@ export function FileManager({ session }: FileManagerProps) {
       status: "loading",
     });
 
-    const timer = window.setInterval(() => {
-      setUploadTasks((currentTasks) =>
-        currentTasks.map((task) =>
-          task.id === taskId && task.status === "uploading"
-            ? {
-                ...task,
-                progress: Math.min(task.progress + 12, 88),
-              }
-            : task,
-        ),
-      );
-    }, 500);
+    const progressListener = await listen<{
+      connection_id: string;
+      path: string;
+      transferred: number;
+      total: number;
+      type: string;
+      transfer_id: string;
+    }>("upload_progress", (event) => {
+      if (event.payload.transfer_id === transferId) {
+        const progress = Math.round((event.payload.transferred / event.payload.total) * 100);
+        setUploadTasks((currentTasks) =>
+          currentTasks.map((task) =>
+            task.id === taskId && task.status === "uploading"
+              ? {
+                  ...task,
+                  progress: Math.min(progress, 99),
+                }
+              : task,
+          ),
+        );
+      }
+    });
 
     try {
       if (isTauriRuntime() && session.connectionId) {
@@ -449,11 +461,12 @@ export function FileManager({ session }: FileManagerProps) {
           connectionId: session.connectionId,
           localPath,
           remotePath,
+          transferId,
         });
         await loadDirectory(currentPath);
       }
 
-      window.clearInterval(timer);
+      await progressListener();
       setUploadTasks((currentTasks) =>
         currentTasks.map((task) =>
           task.id === taskId
@@ -474,7 +487,7 @@ export function FileManager({ session }: FileManagerProps) {
         status: "success",
       });
     } catch (error) {
-      window.clearInterval(timer);
+      await progressListener();
       const message = `Failed to upload ${fileName}: ${String(error)}`;
       setStatusMessage(message);
       setUploadTasks((currentTasks) =>
