@@ -64,6 +64,36 @@ export async function renameItem({ connectionId, oldPath, newPath }: RenameItemP
   });
 }
 
+interface CopyItemParams {
+  connectionId: string;
+  sourcePath: string;
+  targetPath: string;
+  isDirectory: boolean;
+}
+
+export async function copyItem({ connectionId, sourcePath, targetPath, isDirectory }: CopyItemParams): Promise<void> {
+  await invoke("copy_item", {
+    connectionId,
+    sourcePath,
+    targetPath,
+    isDirectory,
+  });
+}
+
+interface MoveItemParams {
+  connectionId: string;
+  sourcePath: string;
+  targetPath: string;
+}
+
+export async function moveItem({ connectionId, sourcePath, targetPath }: MoveItemParams): Promise<void> {
+  await invoke("move_item", {
+    connectionId,
+    sourcePath,
+    targetPath,
+  });
+}
+
 function normalizeDirectoryEntry(entry: DirectoryEntryResponse, index: number): FileEntry {
   if (typeof entry === "string") {
     const normalizedName = entry.replace(/\/$/, "").split("/").filter(Boolean).pop() ?? entry;

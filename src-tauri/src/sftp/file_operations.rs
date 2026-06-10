@@ -26,11 +26,14 @@ pub async fn upload_file(
     let result = tokio::task::spawn_blocking(move || {
         // Open the local file.
         let mut local_file = File::open(&local_path_clone).map_err(|e| format!("Error opening file: {}", e))?;
+        let total_size = local_file.metadata().map_err(|e| format!("Error getting file metadata: {}", e))?.len();
+        
         // Create the remote file.
         let mut remote_file = conn.sftp.create(Path::new(&remote_path_clone)).map_err(|e| format!("Error creating remote file: {}", e))?;
         // Copy the file.
-        std::io::copy(&mut local_file, &mut remote_file).map_err(|e| format!("Error copying file: {}", e))?;
+        // std::io::copy(&mut local_file, &mut remote_file).map_err(|e| format!("Error copying file: {}", e))?;
 
+        
         Ok(())
     }).await;
 

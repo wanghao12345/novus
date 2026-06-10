@@ -2,6 +2,7 @@ import { Button, DropdownMenu, Flex, IconButton, TextField, Tooltip } from "@rad
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
+  ClipboardIcon,
   DownloadIcon,
   DotsHorizontalIcon,
   ReloadIcon,
@@ -15,11 +16,13 @@ interface FileToolbarProps {
   canUseFiles: boolean;
   path: string;
   selectedCount: number;
+  hasClipboardItem: boolean;
   onGoBack: () => void;
   onGoForward: () => void;
   onRefresh: () => void;
   onUpload: () => void;
   onDownload: () => void;
+  onPaste: () => void;
   onClearSelection: () => void;
   onCreateFolder: (folderName: string) => Promise<void> | void;
 }
@@ -30,11 +33,13 @@ export function FileToolbar({
   canUseFiles,
   path,
   selectedCount,
+  hasClipboardItem,
   onGoBack,
   onGoForward,
   onRefresh,
   onUpload,
   onDownload,
+  onPaste,
   onClearSelection,
   onCreateFolder,
 }: FileToolbarProps) {
@@ -60,6 +65,18 @@ export function FileToolbar({
       </Tooltip>
 
       <TextField.Root className="min-w-0 flex-1" readOnly value={path} size="3" />
+
+      <Tooltip content={hasClipboardItem ? "Paste" : "Clipboard is empty"}>
+        <IconButton
+          aria-label="Paste"
+          disabled={!canUseFiles || !hasClipboardItem}
+          onClick={onPaste}
+          size="3"
+          variant="surface"
+        >
+          <ClipboardIcon />
+        </IconButton>
+      </Tooltip>
 
       <Tooltip content={selectedCount > 0 ? "Download selected" : "Select a file first"}>
         <IconButton

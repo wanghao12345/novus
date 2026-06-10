@@ -15,6 +15,8 @@ interface FileTableProps {
   onDeleteEntry: (entry: FileEntry) => void;
   onDownloadEntry: (entry: FileEntry) => void;
   onRenameEntry: (entry: FileEntry) => void;
+  onCopyEntry: (entry: FileEntry) => void;
+  onCutEntry: (entry: FileEntry) => void;
   onSelectFile: (entry: FileEntry) => void;
 }
 
@@ -27,6 +29,8 @@ export function FileTable({
   onDownloadEntry,
   onOpenFolder,
   onRenameEntry,
+  onCopyEntry,
+  onCutEntry,
   onSelectFile,
 }: FileTableProps) {
   return (
@@ -50,6 +54,8 @@ export function FileTable({
             onDownloadEntry={onDownloadEntry}
             onOpenFolder={onOpenFolder}
             onRenameEntry={onRenameEntry}
+            onCopyEntry={onCopyEntry}
+            onCutEntry={onCutEntry}
             onSelectFile={onSelectFile}
           />
         ))}
@@ -67,6 +73,8 @@ function FileRow({
   onDeleteEntry,
   onDownloadEntry,
   onRenameEntry,
+  onCopyEntry,
+  onCutEntry,
   onSelectFile,
 }: {
   density: FileDensity;
@@ -77,6 +85,8 @@ function FileRow({
   onDownloadEntry: (entry: FileEntry) => void;
   onOpenFolder: (entry: FileEntry) => void;
   onRenameEntry: (entry: FileEntry) => void;
+  onCopyEntry: (entry: FileEntry) => void;
+  onCutEntry: (entry: FileEntry) => void;
   onSelectFile: (entry: FileEntry) => void;
 }) {
   const isFolder = entry.type === "folder";
@@ -124,6 +134,13 @@ function FileRow({
             </Flex>
           </ContextMenu.Trigger>
           <ContextMenu.Content>
+            <ContextMenu.Item disabled={isDisabled} onClick={() => onCopyEntry(entry)}>
+              Copy
+            </ContextMenu.Item>
+            <ContextMenu.Item disabled={isDisabled} onClick={() => onCutEntry(entry)}>
+              Cut
+            </ContextMenu.Item>
+            <ContextMenu.Separator />
             <ContextMenu.Item disabled={isDisabled} onClick={() => onRenameEntry(entry)}>
               Rename
             </ContextMenu.Item>

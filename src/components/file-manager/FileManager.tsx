@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Flex, ScrollArea } from "@radix-ui/themes";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useNotifications } from "reapop";
-import { fileEntries } from "@/data/files";
-import { createDirectory, deleteItem, listDirectory, renameItem } from "@/services/sftpDirectory";
-import { uploadFile } from "@/services/sftpTransfer";
-import type { Session } from "@/types/session";
-import type { FileDensity, FileEntry, UploadTask } from "@/types/file-manager";
+import { fileEntries } from "../../data/files";
+import { copyItem, createDirectory, deleteItem, listDirectory, moveItem, renameItem } from "../../services/sftpDirectory";
+import { uploadFile } from "../../services/sftpTransfer";
+import type { Session } from "../../types/session";
+import type { FileDensity, FileEntry, UploadTask } from "../../types/file-manager";
 import { FileStatusBar } from "./parts/FileStatusBar";
 import { FileTable } from "./parts/FileTable";
 import { FileToolbar } from "./parts/FileToolbar";
@@ -31,6 +31,7 @@ export function FileManager({ session }: FileManagerProps) {
   const [uploadTasks, setUploadTasks] = useState<UploadTask[]>([]);
   const [renameEntry, setRenameEntry] = useState<FileEntry | null>(null);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [clipboardItem, setClipboardItem] = useState<{ entry: FileEntry; operation: "copy" | "move" } | null>(null);
 
   const activePath = isConnected ? pathHistory[historyIndex] ?? rootPath : "Connect session to browse files";
   const selectedFile = entries.find((entry) => entry.id === selectedFileId);
@@ -280,6 +281,93 @@ export function FileManager({ session }: FileManagerProps) {
     }
   };
 
+  const handleCopyEntry = (entry: FileEntry) => {
+    setClipboardItem({ entry, operation: "copy" });
+    setStatusMessage(`Copied ${entry.name} to clipboard`);
+    notify({
+      id: `copy-entry-${session.id}-${entry.path}`,
+      message: `Copied ${entry.name} to clipboard.`,
+      status: "success",
+    });
+  };
+
+  const handleCutEntry = (entry: FileEntry) => {
+    setClipboardItem({ entry, operation: "move" });
+    setStatusMessage(`Cut ${entry.name} to clipboard`);
+    notify({
+      id: `cut-entry-${session.id}-${entry.path}`,
+      message: `Cut ${entry.name} to clipboard.`,
+      status: "success",
+    });
+  };
+
+  const handlePaste = async () => {
+    if (!clipboardItem || !session.connectionId) {
+      return;
+    }
+
+    const { entry, operation } = clipboardItem;
+    const currentPath = pathHistory[historyIndex] ?? rootPath;
+    const targetPath = joinRemoteFilePath(currentPath, entry.name);
+    const sourcePath = entry.path || joinRemoteFilePath(currentPath, entry.name);
+
+    const notificationId = `${operation}-entry-${session.id}-${entry.path}`;
+    notify({
+      dismissible: false,
+      id: notificationId,
+      message: `${operation === "copy" ? "Copying" : "Moving"} ${entry.name}...`,
+      status: "loading",
+    });
+
+    try {
+      if (isTauriRuntime()) {
+        if (operation === "copy") {
+          await copyItem({
+            connectionId: session.connectionId,
+            sourcePath,
+            targetPath,
+            isDirectory: entry.type === "folder",
+          });
+        } else {
+          await moveItem({
+            connectionId: session.connectionId,
+            sourcePath,
+            targetPath,
+          });
+        }
+        await loadDirectory(currentPath);
+      } else {
+        setEntries((currentEntries) => {
+          const newEntry = { ...entry, id: `${entry.name}-${Date.now()}`, path: targetPath };
+          if (operation === "move") {
+            return currentEntries.filter((currentEntry) => currentEntry.id !== entry.id);
+          }
+          return [...currentEntries, newEntry];
+        });
+      }
+
+      setStatusMessage(`${operation === "copy" ? "Copied" : "Moved"} ${entry.name}`);
+      notify({
+        dismissAfter: 3500,
+        dismissible: true,
+        id: notificationId,
+        message: `${operation === "copy" ? "Copied" : "Moved"} ${entry.name}.`,
+        status: "success",
+      });
+      setClipboardItem(null);
+    } catch (error) {
+      const message = `Failed to ${operation} ${entry.name}: ${String(error)}`;
+      setStatusMessage(message);
+      notify({
+        dismissAfter: 7000,
+        dismissible: true,
+        id: notificationId,
+        message,
+        status: "error",
+      });
+    }
+  };
+
   const handleUploadClick = async () => {
     if (!isTauriRuntime()) {
       notify({
@@ -415,6 +503,7 @@ export function FileManager({ session }: FileManagerProps) {
         canGoBack={isConnected && historyIndex > 0}
         canGoForward={isConnected && historyIndex < pathHistory.length - 1}
         canUseFiles={isConnected}
+        hasClipboardItem={clipboardItem !== null}
         onClearSelection={() => {
           setSelectedFileId(undefined);
           setStatusMessage("Selection cleared");
@@ -443,6 +532,7 @@ export function FileManager({ session }: FileManagerProps) {
           void loadDirectory(pathHistory[nextIndex] ?? rootPath);
           setStatusMessage("Moved forward");
         }}
+        onPaste={handlePaste}
         onRefresh={() => {
           void loadDirectory(activePath);
         }}
@@ -456,6 +546,8 @@ export function FileManager({ session }: FileManagerProps) {
           density={density}
           entries={entries}
           isDisabled={!isConnected || isLoading}
+          onCopyEntry={handleCopyEntry}
+          onCutEntry={handleCutEntry}
           onDeleteEntry={(entry) => {
             void handleDeleteEntry(entry);
           }}
