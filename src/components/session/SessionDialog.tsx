@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { Button, Dialog, Flex, Text, TextField } from "@radix-ui/themes";
 import { Controller, type SubmitHandler, useForm } from "react-hook-form";
-import type { SessionFormData } from "../../types/session";
+import type { SessionFormData } from "@/types/session";
 
 interface SessionDialogProps {
   children: ReactNode;

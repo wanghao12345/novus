@@ -1,6 +1,6 @@
 import { Box, Button, Flex, Heading, ScrollArea, Text } from "@radix-ui/themes";
 import { PlusIcon } from "@radix-ui/react-icons";
-import type { Session, SessionFormData } from "../../types/session";
+import type { Session, SessionFormData } from "@/types/session";
 import { SessionDialog } from "./SessionDialog";
 import { SessionItem } from "./SessionItem";
 

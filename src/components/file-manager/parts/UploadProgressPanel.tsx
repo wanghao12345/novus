@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Badge, Box, Flex, IconButton, Progress, Text } from "@radix-ui/themes";
 import { ChevronDownIcon, ChevronUpIcon, Cross2Icon } from "@radix-ui/react-icons";
-import type { UploadTask } from "../../../types/file-manager";
+import type { UploadTask } from "@/types/file-manager";
 
 interface UploadProgressPanelProps {
   tasks: UploadTask[];

@@ -1,10 +1,10 @@
 import { Box, ContextMenu, Flex, Table, Text } from "@radix-ui/themes";
-import fileDefaultIcon from "../../../assets/icons/file-default.png";
-import filePdfIcon from "../../../assets/icons/file-pdf.png";
-import fileTxtIcon from "../../../assets/icons/file-txt.png";
-import fileZipIcon from "../../../assets/icons/file-zip.png";
-import folderBlueIcon from "../../../assets/icons/folder-blue.png";
-import type { FileDensity, FileEntry } from "../../../types/file-manager";
+import fileDefaultIcon from "@/assets/icons/file-default.png";
+import filePdfIcon from "@/assets/icons/file-pdf.png";
+import fileTxtIcon from "@/assets/icons/file-txt.png";
+import fileZipIcon from "@/assets/icons/file-zip.png";
+import folderBlueIcon from "@/assets/icons/folder-blue.png";
+import type { FileDensity, FileEntry } from "@/types/file-manager";
 
 interface FileTableProps {
   density: FileDensity;

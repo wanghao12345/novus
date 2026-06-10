@@ -1,5 +1,5 @@
 import { Badge, Button, Flex, Text } from "@radix-ui/themes";
-import type { FileDensity, FileEntry } from "../../../types/file-manager";
+import type { FileDensity, FileEntry } from "@/types/file-manager";
 
 interface FileStatusBarProps {
   density: FileDensity;

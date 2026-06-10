@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Button, Dialog, Flex, Text, TextField } from "@radix-ui/themes";
-import type { FileEntry } from "../../../types/file-manager";
+import { Button, Dialog, Flex, TextField } from "@radix-ui/themes";
+import type { FileEntry } from "@/types/file-manager";
 
 interface RenameDialogProps {
   isOpen: boolean;

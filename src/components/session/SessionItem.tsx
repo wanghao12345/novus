@@ -1,6 +1,6 @@
 import { Badge, Box, Button, Card, Flex, IconButton, Text } from "@radix-ui/themes";
 import { DesktopIcon, DotFilledIcon, Pencil2Icon } from "@radix-ui/react-icons";
-import type { Session, SessionFormData } from "../../types/session";
+import type { Session, SessionFormData } from "@/types/session";
 import { SessionDialog } from "./SessionDialog";
 import { DeleteSessionDialog } from "./parts/DeleteSessionDialog";
 
