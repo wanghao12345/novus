@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -31,18 +34,19 @@ jobs:
           fetch-depth: 0
 
       - name: Set pnpm version
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
           version: 9
 
       - name: Set Node.js version
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24.15.0
           cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -58,14 +62,14 @@ jobs:
           prefix-key: ${{ matrix.target }}
 
       - name: Build for ${{ matrix.arch }}
-        uses: tauri-apps/tauri-action@v1
+        uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_OPTIONS: '--max-old-space-size=4096'
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Novus v${{ github.ref_name }}'
-          releaseBody: 'Release Novus v${{ github.ref_name }}'
+          releaseName: 'Novus ${{ github.ref_name }}'
+          releaseBody: 'Release Novus ${{ github.ref_name }}'
           releaseDraft: true
           prerelease: false
           args: '--target ${{ matrix.target }}'
