@@ -1,0 +1,71 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            arch: macos-intel
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            arch: macos-apple
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            arch: windows
+
+    runs-on: ${{ matrix.platform }}
+    name: Build ${{ matrix.arch }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set pnpm version
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Set Node.js version
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ${{ matrix.target }}
+
+      - name: Build for ${{ matrix.arch }}
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_OPTIONS: '--max-old-space-size=4096'
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Novus v${{ github.ref_name }}'
+          releaseBody: 'Release Novus v${{ github.ref_name }}'
+          releaseDraft: true
+          prerelease: false
+          args: '--target ${{ matrix.target }}'
