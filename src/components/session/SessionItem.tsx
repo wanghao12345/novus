@@ -32,11 +32,11 @@ export function SessionItem({
           : "border-[color:var(--gray-a2)] bg-[var(--gray-a1)]",
       ].join(" ")}
       variant="surface"
+      onClick={onSelect}
     >
       <Box asChild>
         <button
           className="w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-left text-inherit"
-          onClick={onSelect}
           type="button"
         >
           <Flex align="start" gap="3">

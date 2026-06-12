@@ -112,15 +112,9 @@ function App() {
       }
 
       const notificationId = `connect-${session.id}`;
-      notify({
-        dismissAfter: 2500,
-        dismissible: false,
-        id: notificationId,
-        message: `Connecting to ${session.sessionName}...`,
-        status: "loading",
-      });
-      const connectionId = isTauriRuntime()
-        ? await invoke<string>("connect_sftp", {
+      let connectionId = `preview-${session.id}`;
+      if (isTauriRuntime()) {
+        connectionId = await invoke<string>("connect_sftp", {
             config: {
               host: session.host,
               password: session.password,
@@ -128,8 +122,9 @@ function App() {
               session_name: session.sessionName,
               username: session.username,
             },
-        })
-        : `preview-${session.id}`;
+        });
+      }
+
       setConnectionState(sessionId, "connected", connectionId);
       notify({
         dismissAfter: 4500,
