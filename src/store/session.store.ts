@@ -6,12 +6,14 @@ import type { Session, SessionFormData } from "../types/session";
 interface SessionStore {
   sessions: Session[];
   selectedSessionId: string;
+  connectingSessionId: string | null;
   createSession: (session: SessionFormData) => Session;
   deleteSession: (sessionId: string) => void;
   disconnectAllSessions: () => void;
   markConnectionDead: (connectionId: string) => void;
   selectSession: (sessionId: string) => void;
   setConnectionState: (sessionId: string, status: Session["status"], connectionId?: string) => void;
+  setConnectingState: (sessionId: string | null) => void;
   updateSession: (sessionId: string, session: SessionFormData) => void;
 }
 
@@ -21,6 +23,7 @@ const useSessionStore = create<SessionStore>()(
       (set, get) => ({
         sessions: initialSessions,
         selectedSessionId: initialSessions[0]?.id ?? "",
+        connectingSessionId: null,
 
         createSession: (session) => {
           const createdSession: Session = {
@@ -51,6 +54,7 @@ const useSessionStore = create<SessionStore>()(
         disconnectAllSessions: () => {
           set((state) => ({
             sessions: normalizeSessions(state.sessions),
+            connectingSessionId: null,
           }));
         },
 
@@ -65,6 +69,7 @@ const useSessionStore = create<SessionStore>()(
                   }
                 : session,
             ),
+            connectingSessionId: null,
           }));
         },
 
@@ -83,7 +88,12 @@ const useSessionStore = create<SessionStore>()(
                   }
                 : session,
             ),
+            connectingSessionId: null,
           }));
+        },
+
+        setConnectingState: (sessionId) => {
+          set({ connectingSessionId: sessionId });
         },
 
         updateSession: (sessionId, formData) => {

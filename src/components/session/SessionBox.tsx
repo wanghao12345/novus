@@ -5,6 +5,7 @@ import { SessionDialog } from "./SessionDialog";
 import { SessionItem } from "./SessionItem";
 
 interface SessionBoxProps {
+  connectingSessionId: string | null;
   sessions: Session[];
   selectedSessionId: string;
   onCreateSession: (session: SessionFormData) => void;
@@ -15,6 +16,7 @@ interface SessionBoxProps {
 }
 
 export function SessionBox({
+  connectingSessionId,
   sessions,
   selectedSessionId,
   onCreateSession,
@@ -52,6 +54,7 @@ export function SessionBox({
           <Flex className="p-3" direction="column" gap="3">
             {sessions.map((session) => (
               <SessionItem
+                isConnecting={session.id === connectingSessionId}
                 isSelected={session.id === selectedSessionId}
                 key={session.id}
                 session={session}

@@ -1,10 +1,11 @@
-import { Badge, Box, Button, Card, Flex, IconButton, Text } from "@radix-ui/themes";
+import { Badge, Box, Button, Card, Flex, IconButton, Spinner, Text } from "@radix-ui/themes";
 import { DesktopIcon, DotFilledIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import type { Session, SessionFormData } from "@/types/session";
 import { SessionDialog } from "./SessionDialog";
 import { DeleteSessionDialog } from "./parts/DeleteSessionDialog";
 
 interface SessionItemProps {
+  isConnecting: boolean;
   isSelected: boolean;
   session: Session;
   onDelete: () => void;
@@ -14,6 +15,7 @@ interface SessionItemProps {
 }
 
 export function SessionItem({
+  isConnecting,
   isSelected,
   session,
   onDelete,
@@ -70,11 +72,21 @@ export function SessionItem({
         <Button
           className="flex-1"
           color={isConnected ? "gray" : "green"}
+          disabled={isConnecting}
           onClick={onToggleConnection}
           size="2"
           variant="surface"
         >
-          {isConnected ? "Disconnect" : "Connect"}
+          {isConnecting ? (
+            <>
+              <Spinner size="1" />
+              Connecting...
+            </>
+          ) : isConnected ? (
+            "Disconnect"
+          ) : (
+            "Connect"
+          )}
         </Button>
 
         <SessionDialog

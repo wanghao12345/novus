@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
+import { Box, Button, Flex, Heading, Spinner, Text } from "@radix-ui/themes";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useNotifications } from "reapop";
@@ -13,10 +13,12 @@ function App() {
   const { notify } = useNotifications();
   const sessions = useSessionStore((state) => state.sessions);
   const selectedSessionId = useSessionStore((state) => state.selectedSessionId);
+  const connectingSessionId = useSessionStore((state) => state.connectingSessionId);
   const createSession = useSessionStore((state) => state.createSession);
   const deleteSession = useSessionStore((state) => state.deleteSession);
   const selectSession = useSessionStore((state) => state.selectSession);
   const setConnectionState = useSessionStore((state) => state.setConnectionState);
+  const setConnectingState = useSessionStore((state) => state.setConnectingState);
   const updateSession = useSessionStore((state) => state.updateSession);
 
   const selectedSession = useMemo(
@@ -112,9 +114,14 @@ function App() {
       }
 
       const notificationId = `connect-${session.id}`;
-      let connectionId = `preview-${session.id}`;
-      if (isTauriRuntime()) {
-        connectionId = await invoke<string>("connect_sftp", {
+      
+      // 设置连接中状态
+      setConnectingState(sessionId);
+      
+      try {
+        let connectionId = `preview-${session.id}`;
+        if (isTauriRuntime()) {
+          connectionId = await invoke<string>("connect_sftp", {
             config: {
               host: session.host,
               password: session.password,
@@ -122,23 +129,30 @@ function App() {
               session_name: session.sessionName,
               username: session.username,
             },
-        });
-      }
+          });
+        }
 
-      setConnectionState(sessionId, "connected", connectionId);
-      notify({
-        dismissAfter: 4500,
-        dismissible: true,
-        id: notificationId,
-        message: `${session.sessionName} connected successfully.`,
-        status: "success",
-      });
+        setConnectionState(sessionId, "connected", connectionId);
+        notify({
+          dismissAfter: 4500,
+          dismissible: true,
+          id: notificationId,
+          message: `${session.sessionName} connected successfully.`,
+          status: "success",
+        });
+      } finally {
+        // 连接完成或失败后清除连接中状态
+        setConnectingState(null);
+      }
     } catch (error) {
+      // 连接失败后清除连接中状态
+      setConnectingState(null);
+      const errorMessage = extractErrorMessage(error);
       notify({
         dismissAfter: 8000,
         dismissible: true,
         id: `connect-${session.id}`,
-        message: formatCommandError(error, "Connection failed"),
+        message: `Connection failed: ${errorMessage}`,
         status: "error",
       });
     }
@@ -149,6 +163,7 @@ function App() {
       <Flex className="h-full w-full">
         <Box className="h-full w-[360px] shrink-0 border-r border-[color:var(--gray-a5)]">
           <SessionBox
+            connectingSessionId={connectingSessionId}
             sessions={sessions}
             selectedSessionId={selectedSessionId}
             onCreateSession={handleCreateSession}
@@ -163,7 +178,11 @@ function App() {
           {selectedSession && selectedSession.status === "connected" ? (
             <FileManager session={selectedSession} />
           ) : selectedSession ? (
-            <DisconnectedPanel sessionName={selectedSession.sessionName} onConnect={() => void handleToggleConnection(selectedSession.id)} />
+            <DisconnectedPanel 
+              isConnecting={selectedSession.id === connectingSessionId}
+              sessionName={selectedSession.sessionName} 
+              onConnect={() => void handleToggleConnection(selectedSession.id)} 
+            />
           ) : (
             <Flex className="h-full" align="center" justify="center">
               <Text color="gray" size="3">
@@ -183,6 +202,31 @@ function isTauriRuntime() {
   return "__TAURI_INTERNALS__" in window;
 }
 
+function extractErrorMessage(error: unknown): string {
+  // Tauri 2.0 的错误对象通常包含 message 属性
+  if (error && typeof error === 'object' && 'message' in error) {
+    const err = error as { message: string };
+    return err.message || 'Unknown error';
+  }
+  
+  // 如果是字符串，直接返回
+  if (typeof error === 'string') {
+    return error || 'Unknown error';
+  }
+  
+  // 如果是 Error 对象
+  if (error instanceof Error) {
+    return error.message || 'Unknown error';
+  }
+  
+  // 其他情况，尝试序列化
+  try {
+    return JSON.stringify(error) || 'Unknown error';
+  } catch {
+    return 'Unknown error';
+  }
+}
+
 function formatCommandError(error: unknown, fallback: string) {
   if (typeof error === "string" && error.trim()) {
     return `${fallback}: ${error}`;
@@ -199,7 +243,7 @@ function formatCommandError(error: unknown, fallback: string) {
   }
 }
 
-function DisconnectedPanel({ onConnect, sessionName }: { onConnect: () => void; sessionName: string }) {
+function DisconnectedPanel({ onConnect, sessionName, isConnecting }: { onConnect: () => void; sessionName: string; isConnecting: boolean }) {
   return (
     <Flex className="h-full px-6 text-center" align="center" direction="column" justify="center">
       <Heading size="4" mb="2">
@@ -208,8 +252,15 @@ function DisconnectedPanel({ onConnect, sessionName }: { onConnect: () => void; 
       <Text color="gray" size="2" mb="4">
         Connect this server from the session list before browsing remote files.
       </Text>
-      <Button onClick={onConnect} size="2" variant="surface">
-        Connect
+      <Button disabled={isConnecting} onClick={onConnect} size="2" variant="surface">
+        {isConnecting ? (
+          <>
+            <Spinner size="1" />
+            Connecting...
+          </>
+        ) : (
+          "Connect"
+        )}
       </Button>
     </Flex>
   );
